@@ -12,36 +12,56 @@ function createCatTextures(scene: Phaser.Scene): void {
   for (const cat of CATS) {
     const graphics = scene.make.graphics({ x: 0, y: 0 }, false);
     graphics.clear();
-    graphics.fillStyle(cat.ear, 1);
-    graphics.fillTriangle(9, 15, 16, 3, 21, 17);
-    graphics.fillTriangle(31, 17, 37, 3, 46, 15);
+    graphics.lineStyle(2, 0x111827, 0.35);
     graphics.fillStyle(cat.body, 1);
-    graphics.fillRoundedRect(10, 15, 34, 30, 12);
-    graphics.fillEllipse(43, 34, 13, 17);
+    graphics.fillEllipse(28, 34, 25, 32);
+    graphics.fillRoundedRect(18, 38, 9, 17, 4);
+    graphics.fillRoundedRect(31, 38, 9, 17, 4);
     graphics.fillStyle(cat.accent, 1);
-    graphics.fillEllipse(27, 32, 15, 13);
+    graphics.fillEllipse(28, 38, 13, 16);
+    graphics.fillStyle(cat.body, 1);
+    graphics.fillCircle(28, 18, 17);
+    graphics.fillStyle(cat.ear, 1);
+    graphics.fillTriangle(14, 9, 19, 0, 24, 12);
+    graphics.fillTriangle(32, 12, 38, 0, 43, 9);
+    graphics.fillStyle(cat.accent, 1);
+    graphics.fillEllipse(28, 24, 15, 10);
     if (cat.id === "striped") {
       graphics.lineStyle(2, cat.accent, 1);
-      graphics.lineBetween(18, 17, 15, 28);
-      graphics.lineBetween(28, 15, 28, 26);
-      graphics.lineBetween(38, 17, 41, 29);
+      graphics.lineBetween(18, 13, 13, 25);
+      graphics.lineBetween(28, 7, 28, 19);
+      graphics.lineBetween(38, 13, 43, 25);
+      graphics.lineBetween(18, 33, 11, 42);
+      graphics.lineBetween(38, 33, 45, 42);
     }
-    graphics.fillCircle(23, 25, 3.2);
-    graphics.fillCircle(34, 25, 3.2);
+    graphics.fillStyle(cat.body, 1);
+    graphics.fillRoundedRect(11, 31, 11, 9, 5);
+    graphics.fillRoundedRect(34, 31, 11, 9, 5);
+    graphics.fillCircle(11, 53, 5);
+    graphics.fillCircle(45, 53, 5);
     graphics.fillStyle(0x111111, 1);
-    graphics.fillCircle(23, 25, 1.4);
-    graphics.fillCircle(34, 25, 1.4);
-    graphics.fillStyle(cat.accent, 1);
-    graphics.fillEllipse(28, 30, 5, 4);
-    graphics.lineStyle(2, cat.accent, 1);
+    graphics.fillCircle(22, 18, 2.2);
+    graphics.fillCircle(34, 18, 2.2);
+    graphics.fillCircle(28, 24, 1.6);
+    graphics.lineStyle(3, cat.body, 1);
     graphics.beginPath();
-    graphics.arc(12, 37, 11, Phaser.Math.DegToRad(74), Phaser.Math.DegToRad(222), true);
+    graphics.arc(45, 35, 13, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(80), false);
     graphics.strokePath();
-    graphics.lineStyle(2, cat.body, 1);
-    graphics.lineBetween(18, 44, 16, 50);
-    graphics.lineBetween(36, 44, 38, 50);
-    graphics.generateTexture(`cat-${cat.id}`, 52, 52);
+    graphics.generateTexture(`cat-${cat.id}`, 56, 60);
     graphics.destroy();
+
+    const paw = scene.make.graphics({ x: 0, y: 0 }, false);
+    paw.fillStyle(cat.body, 1);
+    paw.fillCircle(19, 24, 8);
+    paw.fillCircle(10, 15, 4);
+    paw.fillCircle(18, 11, 4);
+    paw.fillCircle(26, 15, 4);
+    paw.lineStyle(2, cat.accent, 1);
+    paw.lineBetween(31, 8, 39, 2);
+    paw.lineBetween(33, 16, 43, 14);
+    paw.lineBetween(31, 24, 39, 30);
+    paw.generateTexture(`paw-${cat.id}`, 46, 34);
+    paw.destroy();
   }
 }
 
@@ -49,16 +69,19 @@ function createWeaponTextures(scene: Phaser.Scene): void {
   for (const weapon of Object.values(WEAPONS)) {
     const graphics = scene.make.graphics({ x: 0, y: 0 }, false);
     if (weapon.id === "pistol") {
+      graphics.fillStyle(0x172033, 1);
+      graphics.fillRoundedRect(4, 19, 30, 12, 3);
       graphics.fillStyle(0x58c7ff, 1);
-      graphics.fillRoundedRect(5, 12, 26, 10, 4);
+      graphics.fillRoundedRect(6, 14, 25, 10, 3);
       graphics.fillStyle(0x2f80ed, 1);
-      graphics.fillRoundedRect(20, 20, 9, 17, 3);
+      graphics.fillRoundedRect(19, 23, 9, 15, 2);
       graphics.fillStyle(0xffd166, 1);
-      graphics.fillCircle(33, 16, 4);
+      graphics.fillRect(31, 16, 9, 4);
     } else if (weapon.id === "fishbat") {
+      graphics.lineStyle(2, 0x14352d, 1);
       graphics.fillStyle(0x78c6a3, 1);
-      graphics.fillEllipse(23, 23, 34, 13);
-      graphics.fillTriangle(7, 23, 0, 14, 0, 32);
+      graphics.fillEllipse(23, 23, 36, 12);
+      graphics.fillTriangle(7, 23, 0, 15, 0, 31);
       graphics.fillStyle(0xe8f7ef, 1);
       graphics.fillEllipse(28, 20, 8, 5);
       graphics.fillStyle(0x10231d, 1);
@@ -66,6 +89,7 @@ function createWeaponTextures(scene: Phaser.Scene): void {
       graphics.lineStyle(3, 0x315f52, 1);
       graphics.lineBetween(13, 23, 38, 23);
     } else if (weapon.id === "sardine") {
+      graphics.lineStyle(2, 0x315f72, 1);
       graphics.fillStyle(0xb8d8e8, 1);
       graphics.fillEllipse(22, 23, 30, 10);
       graphics.fillTriangle(6, 23, 0, 16, 0, 30);
@@ -74,6 +98,7 @@ function createWeaponTextures(scene: Phaser.Scene): void {
       graphics.lineStyle(2, 0xf8fafc, 1);
       graphics.lineBetween(13, 19, 27, 27);
     } else if (weapon.id === "spray") {
+      graphics.lineStyle(2, 0x111827, 0.7);
       graphics.fillStyle(0xffc857, 1);
       graphics.fillRoundedRect(13, 14, 18, 26, 5);
       graphics.fillStyle(0x2f80ed, 1);
@@ -84,6 +109,7 @@ function createWeaponTextures(scene: Phaser.Scene): void {
       graphics.lineBetween(35, 14, 43, 10);
       graphics.lineBetween(35, 17, 43, 20);
     } else if (weapon.id === "bell") {
+      graphics.lineStyle(2, 0x6b4e16, 1);
       graphics.fillStyle(0xf4d35e, 1);
       graphics.fillCircle(23, 25, 13);
       graphics.fillStyle(0xd89c00, 1);
@@ -93,6 +119,8 @@ function createWeaponTextures(scene: Phaser.Scene): void {
       graphics.lineStyle(2, 0xff7f50, 1);
       graphics.lineBetween(29, 13, 38, 5);
     } else if (weapon.id === "yarn") {
+      graphics.fillStyle(0x6d214f, 0.35);
+      graphics.fillCircle(24, 24, 17);
       graphics.lineStyle(4, 0xe76f9d, 1);
       graphics.strokeCircle(22, 22, 14);
       graphics.lineStyle(3, 0xffc2d6, 1);
@@ -103,6 +131,7 @@ function createWeaponTextures(scene: Phaser.Scene): void {
       graphics.lineTo(34, 31);
       graphics.strokePath();
     } else if (weapon.id === "bomb") {
+      graphics.lineStyle(2, 0x0b1020, 1);
       graphics.fillStyle(0x243b53, 1);
       graphics.fillCircle(22, 24, 14);
       graphics.fillStyle(0xf4d35e, 1);

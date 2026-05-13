@@ -10,6 +10,7 @@ interface Actor {
   nameTag: Phaser.GameObjects.Text;
   healthBar: Phaser.GameObjects.Rectangle;
   healthBack: Phaser.GameObjects.Rectangle;
+  weaponSprite: Phaser.GameObjects.Image;
   health: number;
   alive: boolean;
   weapon: WeaponId;
@@ -194,12 +195,13 @@ export class GameScene extends Phaser.Scene {
 
     this.match.room.players.slice(0, WORLD.maxPlayers).forEach((player, index) => {
       const spawn = shuffledSpawns[index % shuffledSpawns.length];
+      this.addSpawnMarker(spawn.x, spawn.y);
       const sprite = this.physics.add.sprite(spawn.x, spawn.y, `cat-${player.cat}`);
       sprite.setCollideWorldBounds(true);
       sprite.setBounce(0.05, 0);
       sprite.setDragX(1650);
       sprite.setMaxVelocity(620, 960);
-      sprite.body?.setSize(30, 38).setOffset(11, 7);
+      sprite.body?.setSize(28, 44).setOffset(13, 10);
       sprite.setData("playerId", player.id);
 
       const nameTag = this.add
@@ -213,6 +215,9 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5);
       const healthBack = this.add.rectangle(spawn.x, spawn.y - 35, 46, 6, 0x111827, 0.85);
       const healthBar = this.add.rectangle(spawn.x, spawn.y - 35, 44, 4, 0x40f99b, 1);
+      const weaponSprite = this.add.image(spawn.x + 24, spawn.y - 6, this.getEquippedWeaponTexture(player.cat, this.match.room.settings.startingWeapon));
+      weaponSprite.setDisplaySize(34, 28);
+      weaponSprite.setDepth(4);
 
       const actor: Actor = {
         setup: player,
@@ -220,6 +225,7 @@ export class GameScene extends Phaser.Scene {
         nameTag,
         healthBar,
         healthBack,
+        weaponSprite,
         health: WORLD.maxHealth,
         alive: true,
         weapon: this.match.room.settings.startingWeapon,
@@ -238,11 +244,43 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private addSpawnMarker(x: number, y: number): void {
+    const ring = this.add.ellipse(x, y + 24, 54, 14, 0x5de0e6, 0.18);
+    ring.setStrokeStyle(2, 0x5de0e6, 0.78);
+    const glow = this.add.triangle(x, y + 8, -18, 18, 18, 18, 0, -18, 0x5de0e6, 0.12);
+    this.tweens.add({ targets: [ring, glow], alpha: { from: 0.24, to: 0.58 }, duration: 850, yoyo: true, repeat: -1 });
+  }
+
   private spawnWeapons(map: MapConfig): void {
     const spawnableWeapons = Object.keys(WEAPONS).filter((weapon) => weapon !== "scratch") as WeaponId[];
     map.weaponSpawns.forEach((spawn, index) => {
       const weapon = spawnableWeapons[index % spawnableWeapons.length];
+      this.addWeaponSpawnMarker(spawn.x, spawn.y);
       this.createWeaponPickup(spawn.x, spawn.y, weapon);
+    });
+  }
+
+  private addWeaponSpawnMarker(x: number, y: number): void {
+    const pad = this.add.rectangle(x, y + 20, 44, 8, 0xffd166, 0.18);
+    pad.setStrokeStyle(1, 0xffd166, 0.72);
+    pad.setDepth(1);
+
+    const beam = this.add.triangle(x, y + 4, -12, 16, 12, 16, 0, -18, 0xffd166, 0.11);
+    beam.setDepth(1);
+
+    const pins = [-16, 16].map((offset) => {
+      const pin = this.add.rectangle(x + offset, y + 14, 4, 14, 0xfff2b2, 0.58);
+      pin.setDepth(1);
+      return pin;
+    });
+
+    this.tweens.add({
+      targets: [pad, beam, ...pins],
+      alpha: { from: 0.22, to: 0.66 },
+      duration: 920,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
     });
   }
 
@@ -250,6 +288,15 @@ export class GameScene extends Phaser.Scene {
     const pickup = this.weaponPickups.create(x, y, `weapon-${weapon}`);
     pickup.setData("weapon", weapon);
     pickup.setDisplaySize(36, 36).refreshBody();
+    pickup.setDepth(5);
+    this.tweens.add({
+      targets: pickup,
+      angle: { from: -5, to: 5 },
+      duration: 860,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+    });
   }
 
   private updateLocalActor(actor: Actor, time: number): void {
@@ -389,6 +436,7 @@ export class GameScene extends Phaser.Scene {
     if (weapon.kind === "explosive") {
       projectile.body.allowGravity = true;
       actor.weapon = "scratch";
+      this.updateEquippedWeapon(actor);
     }
   }
 
@@ -400,10 +448,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     actor.weapon = weapon;
+    this.updateEquippedWeapon(actor);
     const x = pickup.x;
     const y = pickup.y;
     pickup.destroy();
-    this.time.delayedCall(6500, () => this.createWeaponPickup(x + 18, y + 18, weapon));
+    this.time.delayedCall(6500, () => this.createWeaponPickup(x, y, weapon));
   }
 
   private onBooster(sprite: Phaser.Physics.Arcade.Sprite, booster: Phaser.Physics.Arcade.Image): void {
@@ -501,6 +550,7 @@ export class GameScene extends Phaser.Scene {
     actor.nameTag.setVisible(false);
     actor.healthBack.setVisible(false);
     actor.healthBar.setVisible(false);
+    actor.weaponSprite.setVisible(false);
   }
 
   private checkRoundState(): void {
@@ -548,6 +598,19 @@ export class GameScene extends Phaser.Scene {
     actor.healthBar.setPosition(actor.sprite.x - (44 - 44 * (actor.health / WORLD.maxHealth)) / 2, actor.sprite.y - 35);
     actor.healthBar.width = 44 * (actor.health / WORLD.maxHealth);
     actor.healthBar.fillColor = actor.health > 45 ? 0x40f99b : 0xffd166;
+    actor.weaponSprite.setTexture(this.getEquippedWeaponTexture(actor.setup.cat, actor.weapon));
+    actor.weaponSprite.setDisplaySize(actor.weapon === "scratch" ? 34 : 32, actor.weapon === "scratch" ? 26 : 32);
+    actor.weaponSprite.setPosition(actor.sprite.x + actor.facing * 25, actor.sprite.y - 4);
+    actor.weaponSprite.setFlipX(actor.facing === -1);
+    actor.weaponSprite.setAngle(actor.facing * (actor.weapon === "scratch" ? -18 : 14));
+  }
+
+  private updateEquippedWeapon(actor: Actor): void {
+    actor.weaponSprite.setTexture(this.getEquippedWeaponTexture(actor.setup.cat, actor.weapon));
+  }
+
+  private getEquippedWeaponTexture(catId: string, weapon: WeaponId): string {
+    return weapon === "scratch" ? `paw-${catId}` : `weapon-${weapon}`;
   }
 
   private updateHud(): void {

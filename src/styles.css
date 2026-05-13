@@ -559,27 +559,27 @@ kbd {
 }
 
 .css-cat .body {
-  right: 22px;
+  left: 42px;
   bottom: 20px;
-  width: 72px;
-  height: 42px;
-  border-radius: 45% 50% 42% 45%;
+  width: 46px;
+  height: 56px;
+  border-radius: 46% 46% 38% 38%;
   background: var(--cat-body);
   box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.08);
 }
 
 .css-cat .head {
-  left: 20px;
-  bottom: 43px;
+  left: 39px;
+  bottom: 70px;
   width: 52px;
-  height: 46px;
+  height: 48px;
   border-radius: 45% 45% 48% 48%;
   background: var(--cat-body);
   box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.08);
 }
 
 .css-cat .ear {
-  bottom: 78px;
+  bottom: 105px;
   width: 20px;
   height: 24px;
   background: var(--cat-ear);
@@ -587,17 +587,17 @@ kbd {
 }
 
 .css-cat .ear.left {
-  left: 24px;
+  left: 44px;
   transform: rotate(-12deg);
 }
 
 .css-cat .ear.right {
-  left: 53px;
+  left: 73px;
   transform: rotate(17deg);
 }
 
 .css-cat .eye {
-  bottom: 64px;
+  bottom: 91px;
   width: 9px;
   height: 12px;
   border-radius: 50%;
@@ -606,16 +606,16 @@ kbd {
 }
 
 .css-cat .eye.left {
-  left: 34px;
+  left: 53px;
 }
 
 .css-cat .eye.right {
-  left: 54px;
+  left: 73px;
 }
 
 .css-cat .muzzle {
-  left: 38px;
-  bottom: 51px;
+  left: 58px;
+  bottom: 79px;
   width: 23px;
   height: 14px;
   border-radius: 50%;
@@ -623,8 +623,8 @@ kbd {
 }
 
 .css-cat .tail {
-  right: 0;
-  bottom: 43px;
+  right: 11px;
+  bottom: 54px;
   width: 42px;
   height: 42px;
   border: 8px solid var(--cat-body);
@@ -635,7 +635,7 @@ kbd {
 }
 
 .css-cat .leg {
-  bottom: 12px;
+  bottom: 5px;
   width: 14px;
   height: 22px;
   border-radius: 999px;
@@ -643,11 +643,33 @@ kbd {
 }
 
 .css-cat .leg.left {
-  left: 54px;
+  left: 50px;
 }
 
 .css-cat .leg.right {
-  right: 32px;
+  right: 42px;
+}
+
+.css-cat::before,
+.css-cat::after {
+  position: absolute;
+  z-index: 2;
+  bottom: 42px;
+  width: 18px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--cat-body);
+  content: "";
+}
+
+.css-cat::before {
+  left: 30px;
+  transform: rotate(16deg);
+}
+
+.css-cat::after {
+  right: 27px;
+  transform: rotate(-16deg);
 }
 
 .css-cat.striped .body,

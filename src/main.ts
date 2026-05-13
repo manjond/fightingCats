@@ -494,7 +494,7 @@ function renderCatPreview(occupiedCats: Map<CatId, string>): string {
     <div class="cat-preview-card">
       <button class="cat-nav" type="button" data-cat-step="-1" aria-label="Previous cat">&lt;</button>
       <div class="cat-preview">
-        <div class="css-cat ${cat.id === "striped" ? "striped" : ""}" style="--cat-body:${body};--cat-accent:${accent};--cat-ear:${ear};">
+        <div class="css-cat upright ${cat.id === "striped" ? "striped" : ""}" style="--cat-body:${body};--cat-accent:${accent};--cat-ear:${ear};">
           <span class="tail"></span>
           <span class="body"></span>
           <span class="head"></span>
