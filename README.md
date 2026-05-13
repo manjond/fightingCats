@@ -38,10 +38,12 @@ The game is intentionally split so we can replace the prototype networking layer
 
 Room creation/join now uses `/api/rooms` with Upstash Redis when deployed. Without Redis env vars, the client falls back to local browser rooms for development only.
 
-Required Vercel env vars, usually created automatically by the Upstash Redis Marketplace integration:
+Required Vercel env vars, usually created automatically by the Upstash Redis Marketplace integration. The API accepts either naming style:
 
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
+- `KV_REST_API_URL`
+- `KV_REST_API_TOKEN`
 
 Vercel serverless functions are still not a good fit for authoritative real-time gameplay WebSockets by themselves. Best next step for live combat sync is one of:
 
