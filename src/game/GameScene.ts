@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { getMapById, MAPS, WEAPONS, WORLD } from "./config";
 import { createGeneratedTextures } from "./sprites";
 import type { MapConfig, MatchConfig, MatchResult, PlayerSetup, RuntimeControls, WeaponId } from "./types";
+import { getMapName, getStoredLanguage, getText, getWeaponName } from "../i18n";
 
 interface Actor {
   setup: PlayerSetup;
@@ -172,7 +173,7 @@ export class GameScene extends Phaser.Scene {
     this.hud.setScrollFactor(0);
 
     this.banner = this.add
-      .text(WORLD.width / 2, 88, `${map.name}`, {
+      .text(WORLD.width / 2, 88, `${getMapName(getStoredLanguage(), map.id)}`, {
         fontFamily: "Inter, system-ui, sans-serif",
         fontSize: "32px",
         color: "#ffffff",
@@ -510,12 +511,12 @@ export class GameScene extends Phaser.Scene {
     const result: MatchResult = {
       ranking,
       points: { ...this.scores },
-      mapName: getMapById(this.mapOrder[this.roundIndex]).name,
+      mapName: getMapName(getStoredLanguage(), getMapById(this.mapOrder[this.roundIndex]).id),
     };
     window.dispatchEvent(new CustomEvent("fc:round-end", { detail: result }));
 
     const winner = ranking[0];
-    this.banner.setText(`${winner.name} gana la ronda`);
+    this.banner.setText(`${winner.name} ${getText(getStoredLanguage(), "winsRound")}`);
 
     this.time.delayedCall(2400, () => {
       this.roundIndex += 1;
@@ -536,15 +537,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateHud(): void {
-    const mapName = getMapById(this.mapOrder[this.roundIndex]).name;
-    const localWeapon = WEAPONS[this.localActor.weapon].name;
+    const language = getStoredLanguage();
+    const mapName = getMapName(language, getMapById(this.mapOrder[this.roundIndex]).id);
+    const localWeapon = getWeaponName(language, this.localActor.weapon);
     const alive = this.actors.filter((actor) => actor.alive).length;
     const ranking = Object.entries(this.scores)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
       .map(([playerId, points]) => `${this.match.room.players.find((player) => player.id === playerId)?.name}: ${points}`)
       .join("  ");
-    this.hud.setText(`Ronda ${this.roundIndex + 1}/${this.mapOrder.length} · ${mapName}\nVivos: ${alive} · Arma: ${localWeapon}\n${ranking}`);
+    this.hud.setText(
+      `${getText(language, "round")} ${this.roundIndex + 1}/${this.mapOrder.length} · ${mapName}\n${getText(language, "alive")}: ${alive} · ${getText(language, "weapon")}: ${localWeapon}\n${ranking}`,
+    );
   }
 
   private cleanupProjectiles(time: number): void {

@@ -111,6 +111,32 @@ select:disabled {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.language-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 42px);
+  gap: 4px;
+  margin-left: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.language-switch button {
+  min-height: 34px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #b8c4d8;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.language-switch button.selected {
+  background: #ffd166;
+  color: #111827;
+}
+
 .home-thumb {
   width: 76px;
   height: 76px;
@@ -277,6 +303,64 @@ select {
   padding: 0 8px;
   color: #ffd166;
   font-weight: 800;
+}
+
+.controls-summary {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.controls-summary .section-title {
+  margin-bottom: 0;
+}
+
+.controls-summary .section-title span {
+  color: #b8c4d8;
+  font-size: 0.9rem;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: minmax(112px, auto) 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(17, 24, 39, 0.62);
+}
+
+.key-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+kbd {
+  display: inline-grid;
+  min-width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  padding: 0 7px;
+  background: #e5e7eb;
+  color: #111827;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .map-option {
@@ -573,6 +657,10 @@ select {
     flex-direction: column;
   }
 
+  .language-switch {
+    margin-left: 0;
+  }
+
   .actions,
   .home-actions,
   .settings-grid,
@@ -581,6 +669,10 @@ select {
   }
 
   .join-form {
+    grid-template-columns: 1fr;
+  }
+
+  .control-row {
     grid-template-columns: 1fr;
   }
 

@@ -1,5 +1,5 @@
 import "./styles.css";
-import { CATS, MAPS, STARTING_WEAPONS, WEAPONS, WORLD } from "./game/config";
+import { CATS, MAPS, STARTING_WEAPONS, WORLD } from "./game/config";
 import { destroyGame, mountGame } from "./game/createGame";
 import {
   createLocalPlayer,
@@ -12,6 +12,16 @@ import {
   roomWithUpdatedHost,
 } from "./game/rooms";
 import type { CatId, MapConfig, MatchResult, PlatformConfig, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
+import {
+  getCatName,
+  getMapName,
+  getStoredLanguage,
+  getText,
+  getWeaponName,
+  LANGUAGES,
+  LANGUAGE_KEY,
+  type Language,
+} from "./i18n";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -29,6 +39,8 @@ const controls: RuntimeControls = {
   throwWeapon: false,
 };
 
+let language = getStoredLanguage();
+document.documentElement.lang = language;
 let localPlayer = createLocalPlayer();
 let activeRoom: RoomSnapshot | null = null;
 let latestResult: MatchResult | null = null;
@@ -45,38 +57,40 @@ function renderHome(): void {
           <div>
             <h1>Fighting Cats</h1>
           </div>
+          ${renderLanguageSwitch()}
         </div>
 
         <div class="home-copy">
-          <h2>Entra, crea sala y pelea en arenas de plataformas.</h2>
-          <p>Un combate rapido y caotico entre gatos con mucho caracter: salta entre tejados, recoge armas absurdas, esquiva trampas y demuestra quien manda en la arena.</p>
+          <h2>${t("homeTagline")}</h2>
+          <p>${t("homeDescription")}</p>
         </div>
 
         <div class="player-panel compact">
           <label>
-            Tu nombre
+            ${t("yourName")}
             <input id="player-name" maxlength="16" value="${escapeHtml(localPlayer.name)}" />
           </label>
         </div>
 
         <div class="actions home-actions">
-          <button class="primary" id="quick-play">Quick play</button>
-          <button id="create-room">Crear sala</button>
-          <button id="show-join">Unirse a sala</button>
+          <button class="primary" id="quick-play">${t("quickPlay")}</button>
+          <button id="create-room">${t("createRoom")}</button>
+          <button id="show-join">${t("joinRoom")}</button>
         </div>
 
         <form id="join-form" class="join-form hidden">
           <label>
-            Codigo de sala
+            ${t("roomCode")}
             <input id="room-code" maxlength="5" placeholder="AB12C" autocomplete="off" />
           </label>
-          <button class="primary" type="submit">Entrar</button>
+          <button class="primary" type="submit">${t("enter")}</button>
         </form>
       </section>
     </main>
   `;
 
   bindPlayerControls();
+  bindLanguageSwitch(renderHome);
   document.querySelector("#quick-play")?.addEventListener("click", () => {
     syncLocalPlayer();
     activeRoom = quickPlay(localPlayer);
@@ -94,7 +108,7 @@ function renderHome(): void {
     const code = document.querySelector<HTMLInputElement>("#room-code")?.value ?? "";
     const room = joinRoom(code, localPlayer);
     if (!room) {
-      showToast("Sala no encontrada o llena");
+      showToast(t("roomNotFound"));
       return;
     }
     activeRoom = room;
@@ -109,60 +123,64 @@ function renderCreateRoom(): void {
     <main class="shell">
       <section class="lobby wide">
         <div class="topline">
-          <button class="ghost" id="back-home">Volver</button>
-          <h1>Crear sala</h1>
+          <button class="ghost" id="back-home">${t("back")}</button>
+          <h1>${t("createRoom")}</h1>
+          ${renderLanguageSwitch()}
         </div>
 
         <form id="room-form" class="settings-grid">
           <label>
-            Visibilidad
+            ${t("visibility")}
             <select id="visibility">
-              <option value="public">Publica</option>
-              <option value="private">Privada</option>
+              <option value="public">${t("public")}</option>
+              <option value="private">${t("private")}</option>
             </select>
           </label>
           <label>
-            Tipo
+            ${t("type")}
             <select id="mode">
-              <option value="standard">Standard: 5 mapas</option>
-              <option value="custom">Custom</option>
+              <option value="standard">${t("standardMode")}</option>
+              <option value="custom">${t("customMode")}</option>
             </select>
           </label>
           <label>
-            Jugadores
+            ${t("players")}
             <input id="max-players" type="number" min="2" max="8" value="${settings.maxPlayers}" />
           </label>
           <label>
-            Rondas
+            ${t("rounds")}
             <input id="rounds" type="number" min="1" max="8" value="${settings.rounds}" />
           </label>
           <label>
-            Arma inicial
+            ${t("startingWeapon")}
             <select id="starting-weapon">
-              ${STARTING_WEAPONS.map((weapon) => `<option value="${weapon}">${WEAPONS[weapon].name}</option>`).join("")}
+              ${STARTING_WEAPONS.map((weapon) => `<option value="${weapon}">${weaponName(weapon)}</option>`).join("")}
             </select>
           </label>
 
           <fieldset class="map-picker">
-            <legend>Mapas custom</legend>
+            <legend>${t("customMaps")}</legend>
             ${MAPS.map(
               (map) => `
                 <label class="map-option">
                   <input type="checkbox" name="maps" value="${map.id}" ${settings.mapIds.includes(map.id) ? "checked" : ""} />
                   ${renderMapPreview(map)}
-                  <span>${map.name}</span>
+                  <span>${mapName(map.id)}</span>
                 </label>
               `,
             ).join("")}
           </fieldset>
 
-          <button class="primary span" type="submit">Crear sala</button>
+          ${renderControlsSummary()}
+
+          <button class="primary span" type="submit">${t("createRoom")}</button>
         </form>
       </section>
     </main>
   `;
 
   document.querySelector("#back-home")?.addEventListener("click", renderHome);
+  bindLanguageSwitch(renderCreateRoom);
   document.querySelector("#mode")?.addEventListener("change", updateCustomFields);
   updateCustomFields();
 
@@ -193,18 +211,19 @@ function renderRoom(room: RoomSnapshot): void {
     <main class="shell">
       <section class="lobby wide">
         <div class="room-header">
-          <button class="ghost" id="back-home">Salir</button>
+          <button class="ghost" id="back-home">${t("leave")}</button>
           <div>
-            <p class="eyebrow">${room.settings.visibility === "public" ? "Sala publica" : "Sala privada"}</p>
+            <p class="eyebrow">${room.settings.visibility === "public" ? t("publicRoom") : t("privateRoom")}</p>
             <h1>${room.code}</h1>
           </div>
-          <button class="primary" id="start-match">Jugar</button>
+          <button class="primary" id="start-match">${t("play")}</button>
+          ${renderLanguageSwitch()}
         </div>
 
         <div class="room-layout">
           <div class="roster">
             <div class="section-title">
-              <p class="eyebrow">Jugadores</p>
+              <p class="eyebrow">${t("players")}</p>
               <h2>${room.players.length}/${room.settings.maxPlayers}</h2>
             </div>
             ${room.players
@@ -213,19 +232,19 @@ function renderRoom(room: RoomSnapshot): void {
                   <div class="player-card">
                     <span class="cat-dot" style="background:#${CATS.find((cat) => cat.id === player.cat)?.body.toString(16).padStart(6, "0") ?? "f28c28"}"></span>
                     <strong>${escapeHtml(player.name)}</strong>
-                    <span>${player.bot ? "Bot" : "Player"}</span>
+                    <span>${player.bot ? "Bot" : t("player")}</span>
                   </div>
                 `,
               )
               .join("")}
-            <div class="player-card muted">${room.settings.maxPlayers - room.players.length} slots libres</div>
+            <div class="player-card muted">${room.settings.maxPlayers - room.players.length} ${t("freeSlots")}</div>
           </div>
 
           <div class="room-side">
             <div class="cat-selection">
               <div class="section-title">
-                <p class="eyebrow">Tu gato</p>
-                <h2>Elige luchador</h2>
+                <p class="eyebrow">${t("yourCat")}</p>
+                <h2>${t("chooseFighter")}</h2>
               </div>
               <div class="cat-grid room-cat-grid" aria-label="Selector de gato en sala">
                 ${CATS.map((cat) => {
@@ -234,8 +253,8 @@ function renderRoom(room: RoomSnapshot): void {
                   return `
                     <button class="cat-chip ${selected ? "selected" : ""} ${owner ? "taken" : ""}" data-room-cat="${cat.id}" ${owner ? "disabled" : ""}>
                       <span class="cat-dot" style="background:#${cat.body.toString(16).padStart(6, "0")}"></span>
-                      <span>${cat.name}</span>
-                      <small>${owner ? `Ocupado por ${escapeHtml(owner)}` : selected ? "Tu gato" : "Libre"}</small>
+                      <span>${catName(cat.id)}</span>
+                      <small>${owner ? `${t("occupiedBy")} ${escapeHtml(owner)}` : selected ? t("selectedCat") : t("free")}</small>
                     </button>
                   `;
                 }).join("")}
@@ -243,10 +262,10 @@ function renderRoom(room: RoomSnapshot): void {
             </div>
 
             <div class="room-summary">
-              <p><strong>Modo</strong> ${room.settings.mode}</p>
-              <p><strong>Rondas</strong> ${room.settings.rounds}</p>
-              <p><strong>Arma inicial</strong> ${WEAPONS[room.settings.startingWeapon].name}</p>
-              <p><strong>Mapas</strong> ${room.settings.mapIds.map((id) => MAPS.find((map) => map.id === id)?.name).join(", ")}</p>
+              <p><strong>${t("mode")}</strong> ${room.settings.mode === "standard" ? t("standardMode") : t("customMode")}</p>
+              <p><strong>${t("rounds")}</strong> ${room.settings.rounds}</p>
+              <p><strong>${t("startingWeapon")}</strong> ${weaponName(room.settings.startingWeapon)}</p>
+              <p><strong>${t("maps")}</strong> ${room.settings.mapIds.map((id) => mapName(id)).join(", ")}</p>
             </div>
           </div>
         </div>
@@ -255,6 +274,7 @@ function renderRoom(room: RoomSnapshot): void {
   `;
 
   document.querySelector("#back-home")?.addEventListener("click", renderHome);
+  bindLanguageSwitch(() => renderRoom(room));
   document.querySelectorAll<HTMLButtonElement>("[data-room-cat]").forEach((button) => {
     button.addEventListener("click", () => {
       localPlayer = { ...localPlayer, cat: button.dataset.roomCat as CatId };
@@ -275,7 +295,7 @@ function renderGame(room: RoomSnapshot): void {
     <main class="game-shell">
       <div id="game-root" class="game-root"></div>
       <div class="game-topbar">
-        <button id="leave-game">Salir</button>
+        <button id="leave-game">${t("leave")}</button>
         <div id="round-feed"></div>
       </div>
       <div class="mobile-controls" aria-hidden="true">
@@ -322,7 +342,7 @@ window.addEventListener("fc:match-end", () => {
     appRoot.innerHTML = `
       <main class="shell">
         <section class="lobby">
-          <h1>Resultado</h1>
+          <h1>${t("result")}</h1>
           <div class="score-list">
             ${sortedPlayers
               .map(
@@ -336,8 +356,8 @@ window.addEventListener("fc:match-end", () => {
               )
               .join("")}
           </div>
-          <button class="primary" id="play-again">Otra partida</button>
-          <button id="home">Menu</button>
+          <button class="primary" id="play-again">${t("playAgain")}</button>
+          <button id="home">${t("menu")}</button>
         </section>
       </main>
     `;
@@ -388,6 +408,64 @@ function updateCustomFields(): void {
   });
 }
 
+function renderLanguageSwitch(): string {
+  return `
+    <div class="language-switch" aria-label="Language">
+      ${(Object.keys(LANGUAGES) as Language[])
+        .map(
+          (candidate) => `
+            <button class="${language === candidate ? "selected" : ""}" data-language="${candidate}" type="button">
+              ${LANGUAGES[candidate]}
+            </button>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function bindLanguageSwitch(onChange: () => void): void {
+  document.querySelectorAll<HTMLButtonElement>("[data-language]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextLanguage = button.dataset.language as Language;
+      language = nextLanguage;
+      document.documentElement.lang = language;
+      localStorage.setItem(LANGUAGE_KEY, nextLanguage);
+      onChange();
+    });
+  });
+}
+
+function renderControlsSummary(): string {
+  const controls = [
+    { keys: ["A", "D", "<", ">"], action: t("controlsMove") },
+    { keys: ["W", "Space", "^"], action: t("controlsJump") },
+    { keys: ["J", "A"], action: t("controlsAttack") },
+    { keys: ["K", "Shift", "B"], action: t("controlsThrow") },
+  ];
+
+  return `
+    <section class="controls-summary span">
+      <div class="section-title">
+        <p class="eyebrow">${t("controlsTitle")}</p>
+        <span>${t("controlsMobile")}</span>
+      </div>
+      <div class="controls-grid">
+        ${controls
+          .map(
+            (control) => `
+              <div class="control-row">
+                <span class="key-group">${control.keys.map((key) => `<kbd>${key}</kbd>`).join("")}</span>
+                <span>${control.action}</span>
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderMapPreview(map: MapConfig): string {
   return `
     <span class="map-preview map-theme-${map.theme}" aria-hidden="true">
@@ -404,6 +482,22 @@ function previewStyle(item: PlatformConfig): string {
   const width = (item.width / WORLD.width) * 100;
   const height = Math.max((item.height / WORLD.height) * 100, 2.4);
   return `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;width:${width.toFixed(2)}%;height:${height.toFixed(2)}%;`;
+}
+
+function t(key: Parameters<typeof getText>[1]): string {
+  return getText(language, key);
+}
+
+function catName(id: CatId): string {
+  return getCatName(language, id);
+}
+
+function weaponName(id: WeaponId): string {
+  return getWeaponName(language, id);
+}
+
+function mapName(id: string): string {
+  return getMapName(language, id);
 }
 
 function readInput(id: string): string {
