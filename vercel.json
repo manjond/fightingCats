@@ -18,7 +18,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://coopverse.io https://www.coopverse.io"
+          "value": "frame-ancestors 'self' https://coopverse.io https://www.coopverse.io http://localhost:* http://127.0.0.1:*"
         }
       ]
     }
