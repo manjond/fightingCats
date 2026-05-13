@@ -14,6 +14,9 @@ interface Actor {
   health: number;
   alive: boolean;
   weapon: WeaponId;
+  weaponAnimationId: WeaponId;
+  weaponAnimationStartedAt: number;
+  weaponAnimationUntil: number;
   lastAttackAt: number;
   lastHazardAt: number;
   facing: 1 | -1;
@@ -229,6 +232,9 @@ export class GameScene extends Phaser.Scene {
         health: WORLD.maxHealth,
         alive: true,
         weapon: this.match.room.settings.startingWeapon,
+        weaponAnimationId: this.match.room.settings.startingWeapon,
+        weaponAnimationStartedAt: 0,
+        weaponAnimationUntil: 0,
         lastAttackAt: 0,
         lastHazardAt: 0,
         facing: 1,
@@ -291,8 +297,9 @@ export class GameScene extends Phaser.Scene {
     pickup.setDepth(5);
     this.tweens.add({
       targets: pickup,
-      angle: { from: -5, to: 5 },
-      duration: 860,
+      angle: { from: -6, to: 6 },
+      y: y - 5,
+      duration: 920,
       yoyo: true,
       repeat: -1,
       ease: "Sine.inOut",
@@ -384,6 +391,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     actor.lastAttackAt = time;
+    this.playWeaponAnimation(actor, weaponId);
     if (weapon.kind === "melee") {
       this.performMelee(actor, weaponId);
       return;
@@ -593,20 +601,61 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateActorUi(actor: Actor): void {
+    const now = this.time.now;
+    const activeAnimation = now < actor.weaponAnimationUntil;
+    const visualWeapon = activeAnimation ? actor.weaponAnimationId : actor.weapon;
+    const animationProgress = activeAnimation
+      ? Phaser.Math.Clamp(
+          (now - actor.weaponAnimationStartedAt) / Math.max(1, actor.weaponAnimationUntil - actor.weaponAnimationStartedAt),
+          0,
+          1,
+        )
+      : 0;
+    const weapon = WEAPONS[visualWeapon];
+    const pulse = activeAnimation ? Math.sin(animationProgress * Math.PI) : 0;
+    const swing = Phaser.Math.Easing.Cubic.Out(animationProgress);
+
+    let xOffset = actor.facing * 25;
+    let yOffset = -4;
+    let angle = actor.facing * (visualWeapon === "scratch" ? -18 : 14);
+    let width = visualWeapon === "scratch" ? 34 : 32;
+    let height = visualWeapon === "scratch" ? 26 : 32;
+
+    if (activeAnimation && weapon.kind === "melee") {
+      xOffset = actor.facing * (visualWeapon === "fishbat" ? 19 + pulse * 25 : 22 + pulse * 12);
+      yOffset = -6 - pulse * 9;
+      angle = actor.facing * Phaser.Math.Linear(-62, 72, swing);
+      width += pulse * (visualWeapon === "fishbat" ? 11 : 7);
+      height += pulse * (visualWeapon === "fishbat" ? 7 : 5);
+    } else if (activeAnimation) {
+      xOffset = actor.facing * (25 - pulse * 10);
+      yOffset = -5 - pulse * 5;
+      angle = actor.facing * (visualWeapon === "bomb" || visualWeapon === "bell" ? Phaser.Math.Linear(-32, 44, swing) : 14 - pulse * 24);
+      width += pulse * 4;
+      height += pulse * 4;
+    }
+
     actor.nameTag.setPosition(actor.sprite.x, actor.sprite.y - 52);
     actor.healthBack.setPosition(actor.sprite.x, actor.sprite.y - 35);
     actor.healthBar.setPosition(actor.sprite.x - (44 - 44 * (actor.health / WORLD.maxHealth)) / 2, actor.sprite.y - 35);
     actor.healthBar.width = 44 * (actor.health / WORLD.maxHealth);
     actor.healthBar.fillColor = actor.health > 45 ? 0x40f99b : 0xffd166;
-    actor.weaponSprite.setTexture(this.getEquippedWeaponTexture(actor.setup.cat, actor.weapon));
-    actor.weaponSprite.setDisplaySize(actor.weapon === "scratch" ? 34 : 32, actor.weapon === "scratch" ? 26 : 32);
-    actor.weaponSprite.setPosition(actor.sprite.x + actor.facing * 25, actor.sprite.y - 4);
+    actor.weaponSprite.setTexture(this.getEquippedWeaponTexture(actor.setup.cat, visualWeapon));
+    actor.weaponSprite.setDisplaySize(width, height);
+    actor.weaponSprite.setPosition(actor.sprite.x + xOffset, actor.sprite.y + yOffset);
     actor.weaponSprite.setFlipX(actor.facing === -1);
-    actor.weaponSprite.setAngle(actor.facing * (actor.weapon === "scratch" ? -18 : 14));
+    actor.weaponSprite.setAngle(angle);
   }
 
   private updateEquippedWeapon(actor: Actor): void {
     actor.weaponSprite.setTexture(this.getEquippedWeaponTexture(actor.setup.cat, actor.weapon));
+  }
+
+  private playWeaponAnimation(actor: Actor, weaponId: WeaponId): void {
+    const weapon = WEAPONS[weaponId];
+    actor.weaponAnimationId = weaponId;
+    actor.weaponAnimationStartedAt = this.time.now;
+    actor.weaponAnimationUntil = this.time.now + (weapon.kind === "melee" ? 210 : 170);
   }
 
   private getEquippedWeaponTexture(catId: string, weapon: WeaponId): string {
