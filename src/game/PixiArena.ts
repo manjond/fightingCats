@@ -58,15 +58,15 @@ const DRAG_X = 1650;
 const MAX_VX = 620;
 const MAX_VY = 960;
 
-const THEME_PALETTES: Record<MapConfig["theme"], { base: number; shadow: number; grid: number; accent: number; platform: number; top: number }> = {
-  rooftop: { base: 0x101827, shadow: 0x07101f, grid: 0x5de0e6, accent: 0xffd166, platform: 0x39445c, top: 0x7bdff2 },
-  greenhouse: { base: 0x0e241f, shadow: 0x07150f, grid: 0x40f99b, accent: 0xff7f50, platform: 0x286152, top: 0x8ef0b4 },
-  subway: { base: 0x151821, shadow: 0x090b11, grid: 0xf6c453, accent: 0x5de0e6, platform: 0x343847, top: 0xf6c453 },
-  arcade: { base: 0x191126, shadow: 0x080612, grid: 0xff5f7e, accent: 0x5de0e6, platform: 0x47335f, top: 0xff5f7e },
-  bakery: { base: 0x241522, shadow: 0x100812, grid: 0xffc857, accent: 0xff8fab, platform: 0x65405a, top: 0xffc857 },
-  dojo: { base: 0x211827, shadow: 0x0f0a14, grid: 0xf8b195, accent: 0xffd166, platform: 0x57415b, top: 0xf8b195 },
-  lab: { base: 0x0e222a, shadow: 0x061118, grid: 0x5de0e6, accent: 0xff4d6d, platform: 0x285669, top: 0x5de0e6 },
-  harbor: { base: 0x102a32, shadow: 0x06161c, grid: 0x78c6a3, accent: 0xf4d35e, platform: 0x2f5966, top: 0x78c6a3 },
+const THEME_PALETTES: Record<MapConfig["theme"], { sky: number; far: number; mid: number; accent: number; platform: number; top: number; trim: number }> = {
+  rooftop: { sky: 0x17233b, far: 0x0a1020, mid: 0x243047, accent: 0xffd166, platform: 0x566173, top: 0xb6c2d6, trim: 0x2a3345 },
+  greenhouse: { sky: 0x163528, far: 0x0b1c16, mid: 0x2f6f55, accent: 0xff7f50, platform: 0x3d8b65, top: 0xb7f3c4, trim: 0x194936 },
+  subway: { sky: 0x11141d, far: 0x07080d, mid: 0x272a34, accent: 0xf6c453, platform: 0x424651, top: 0xf0c86a, trim: 0x1a1d25 },
+  arcade: { sky: 0x1a1028, far: 0x080510, mid: 0x3d2455, accent: 0xff5f7e, platform: 0x4b315d, top: 0x5de0e6, trim: 0x251433 },
+  bakery: { sky: 0x2c1722, far: 0x140811, mid: 0x6c3d45, accent: 0xffc857, platform: 0xb76e4f, top: 0xffdf9e, trim: 0x6b342b },
+  dojo: { sky: 0x241820, far: 0x100a0f, mid: 0x5d3942, accent: 0xffd166, platform: 0x8b5e34, top: 0xf8b195, trim: 0x3b211c },
+  lab: { sky: 0x0d222a, far: 0x061118, mid: 0x1f5664, accent: 0xff4d6d, platform: 0x2e6978, top: 0x5de0e6, trim: 0x14343f },
+  harbor: { sky: 0x12313a, far: 0x06161c, mid: 0x2f5966, accent: 0xf4d35e, platform: 0x7d6846, top: 0xc0a15b, trim: 0x3b2f21 },
 };
 
 export class PixiArena {
@@ -229,32 +229,25 @@ export class PixiArena {
   private drawBackdrop(map: MapConfig): void {
     const palette = THEME_PALETTES[map.theme];
     const background = new Graphics();
-    background.rect(0, 0, WORLD.width, WORLD.height).fill(palette.base);
+    background.rect(0, 0, WORLD.width, WORLD.height).fill(palette.sky);
     this.world.addChild(background);
 
-    for (let y = 58; y < WORLD.height; y += 96) {
-      const line = new Graphics();
-      line.rect(0, y, WORLD.width, 2).fill({ color: palette.grid, alpha: 0.18 });
-      this.world.addChild(line);
-    }
-
-    for (let index = 0; index < 12; index += 1) {
-      const x = index * 118 + 36;
-      const height = 72 + ((index * 43) % 168);
-      const block = new Graphics();
-      block.rect(x - 31, WORLD.height - 46 - height, 62, height).fill({ color: palette.shadow, alpha: 0.58 });
-      block.rect(x - 10, WORLD.height - 58 - height, 32, 7).fill({ color: palette.accent, alpha: 0.62 });
-      block.rect(x - 20, WORLD.height - 70 - height / 2, 5, height - 20).fill({ color: palette.grid, alpha: 0.28 });
-      this.world.addChild(block);
-    }
-
-    if (map.theme === "arcade") {
-      for (let x = 95; x < WORLD.width; x += 155) {
-        const sign = new Graphics();
-        sign.rect(x - 24, 90, 48, 38).fill({ color: 0xff5f7e, alpha: 0.24 });
-        sign.rect(x - 5, 108, 26, 8).fill({ color: 0x5de0e6, alpha: 0.42 });
-        this.world.addChild(sign);
-      }
+    if (map.theme === "rooftop") {
+      this.drawRooftopBackdrop(palette);
+    } else if (map.theme === "greenhouse") {
+      this.drawGreenhouseBackdrop(palette);
+    } else if (map.theme === "subway") {
+      this.drawSubwayBackdrop(palette);
+    } else if (map.theme === "arcade") {
+      this.drawArcadeBackdrop(palette);
+    } else if (map.theme === "bakery") {
+      this.drawBakeryBackdrop(palette);
+    } else if (map.theme === "dojo") {
+      this.drawDojoBackdrop(palette);
+    } else if (map.theme === "lab") {
+      this.drawLabBackdrop(palette);
+    } else {
+      this.drawHarborBackdrop(palette);
     }
   }
 
@@ -263,13 +256,170 @@ export class PixiArena {
     for (const platform of map.platforms) {
       const g = new Graphics();
       g.rect(platform.x - platform.width / 2, platform.y - platform.height / 2, platform.width, platform.height).fill(OUTLINE);
-      g.rect(platform.x - platform.width / 2, platform.y - platform.height / 2, platform.width, 4).fill(palette.top);
-      g.rect(platform.x - platform.width / 2, platform.y - platform.height / 2 + 4, platform.width, platform.height - 6).fill(palette.platform);
-      for (let x = platform.x - platform.width / 2 + 10; x < platform.x + platform.width / 2; x += 34) {
-        g.rect(x, platform.y - 2, 14, 3).fill({ color: palette.accent, alpha: 0.8 });
+      g.rect(platform.x - platform.width / 2 + 2, platform.y - platform.height / 2 + 2, platform.width - 4, Math.max(4, platform.height - 4)).fill(palette.platform);
+      g.rect(platform.x - platform.width / 2 + 2, platform.y - platform.height / 2 + 2, platform.width - 4, 5).fill(palette.top);
+      g.rect(platform.x - platform.width / 2 + 2, platform.y + platform.height / 2 - 6, platform.width - 4, 4).fill(palette.trim);
+
+      const detailY = platform.y - platform.height / 2 + Math.max(9, platform.height * 0.45);
+      for (let x = platform.x - platform.width / 2 + 12; x < platform.x + platform.width / 2 - 10; x += map.theme === "harbor" || map.theme === "dojo" ? 42 : 34) {
+        if (map.theme === "rooftop" || map.theme === "subway" || map.theme === "lab") {
+          g.rect(x, detailY, 16, 3).fill({ color: palette.accent, alpha: 0.8 });
+        } else if (map.theme === "harbor" || map.theme === "dojo" || map.theme === "bakery") {
+          g.rect(x, platform.y - platform.height / 2 + 4, 4, platform.height - 8).fill({ color: palette.trim, alpha: 0.72 });
+        } else {
+          g.rect(x, detailY - 4, 10, 10).fill({ color: palette.accent, alpha: 0.36 });
+        }
       }
       this.world.addChild(g);
     }
+  }
+
+  private drawRooftopBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 510, WORLD.width, 210).fill(0x0c1322);
+    for (let x = -20; x < WORLD.width; x += 94) {
+      const height = 130 + ((x + 220) % 170);
+      g.rect(x, 510 - height, 74, height).fill(palette.far);
+      g.rect(x + 10, 510 - height + 18, 12, 8).fill({ color: palette.accent, alpha: 0.55 });
+      g.rect(x + 38, 510 - height + 44, 12, 8).fill({ color: 0x5de0e6, alpha: 0.38 });
+      g.rect(x + 28, 510 - height - 20, 16, 20).fill(palette.far);
+      g.rect(x + 26, 510 - height - 24, 20, 4).fill(palette.accent);
+    }
+    g.rect(0, 595, WORLD.width, 24).fill(0x1d2638);
+    for (let x = 30; x < WORLD.width; x += 110) {
+      g.rect(x, 560, 44, 34).fill(0x2b3548);
+      g.rect(x + 8, 548, 28, 12).fill(0x566173);
+      g.rect(x + 54, 548, 12, 47).fill(0x111827);
+      g.rect(x + 51, 542, 18, 8).fill(0xb6c2d6);
+    }
+    this.world.addChild(g);
+  }
+
+  private drawGreenhouseBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(80, 80, 1120, 500).fill({ color: 0xb7f3c4, alpha: 0.13 });
+    for (let x = 80; x <= 1200; x += 80) {
+      g.rect(x, 80, 5, 500).fill(0x2f6f55);
+    }
+    for (let y = 110; y <= 570; y += 70) {
+      g.rect(80, y, 1120, 5).fill(0x2f6f55);
+    }
+    g.poly([80, 80, 640, 20, 1200, 80]).fill({ color: 0xb7f3c4, alpha: 0.11 });
+    g.poly([80, 80, 640, 20, 1200, 80]).stroke({ width: 6, color: 0x3d8b65, alpha: 0.8 });
+    for (let x = 105; x < WORLD.width; x += 155) {
+      g.rect(x, 484, 38, 80).fill(0x194936);
+      g.rect(x - 22, 460, 82, 26).fill(0x40f99b);
+      g.rect(x - 8, 426, 54, 36).fill(0x2f6f55);
+      g.rect(x + 14, 392, 26, 36).fill(0x8ef0b4);
+    }
+    g.rect(0, 585, WORLD.width, 38).fill(0x102d28);
+    this.world.addChild(g);
+  }
+
+  private drawSubwayBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 94, WORLD.width, 460).fill(0x0b0d14);
+    g.rect(70, 150, 1140, 320).fill(0x1d202a);
+    for (let x = 120; x < WORLD.width; x += 190) {
+      g.rect(x, 186, 112, 84).fill(0x11141d);
+      g.rect(x + 10, 196, 92, 64).fill(0x28303d);
+      g.rect(x + 20, 220, 72, 8).fill({ color: palette.accent, alpha: 0.65 });
+    }
+    g.rect(0, 520, WORLD.width, 36).fill(0x07080d);
+    g.rect(0, 548, WORLD.width, 8).fill(palette.accent);
+    for (let x = 20; x < WORLD.width; x += 62) {
+      g.rect(x, 555, 40, 8).fill(0x424651);
+    }
+    this.world.addChild(g);
+  }
+
+  private drawArcadeBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 74, WORLD.width, 500).fill(0x12091f);
+    for (let x = 70; x < WORLD.width; x += 142) {
+      g.rect(x, 312, 88, 210).fill(0x080510);
+      g.rect(x + 8, 322, 72, 58).fill(0x5de0e6);
+      g.rect(x + 18, 396, 18, 18).fill(palette.accent);
+      g.rect(x + 48, 396, 18, 18).fill(0xffd166);
+      g.rect(x + 12, 440, 64, 12).fill(0x3d2455);
+      g.rect(x + 22, 468, 42, 54).fill(0x251433);
+    }
+    for (let x = 44; x < WORLD.width; x += 96) {
+      g.rect(x, 118, 52, 26).fill(palette.accent);
+      g.rect(x + 8, 126, 36, 6).fill(0x5de0e6);
+    }
+    this.world.addChild(g);
+  }
+
+  private drawBakeryBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 90, WORLD.width, 500).fill(0x3b2029);
+    for (let x = 70; x < WORLD.width; x += 185) {
+      g.rect(x, 350, 120, 190).fill(0x6c3d45);
+      g.rect(x + 12, 365, 96, 28).fill(0xffdf9e);
+      g.rect(x + 22, 410, 26, 26).fill(0xffc857);
+      g.rect(x + 62, 410, 26, 26).fill(0xd68a4a);
+      g.rect(x + 30, 470, 62, 70).fill(0x2c1722);
+    }
+    for (let x = 120; x < WORLD.width; x += 260) {
+      g.rect(x, 160, 92, 62).fill(0x140811);
+      g.rect(x + 10, 172, 72, 38).fill(0xffc857);
+    }
+    g.rect(0, 560, WORLD.width, 34).fill(0x6b342b);
+    this.world.addChild(g);
+  }
+
+  private drawDojoBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 80, WORLD.width, 500).fill(0x2c1c21);
+    for (let x = 85; x < WORLD.width; x += 155) {
+      g.rect(x, 100, 18, 460).fill(0x3b211c);
+      g.rect(x + 28, 108, 82, 210).fill(0x5d3942);
+      g.rect(x + 36, 118, 66, 12).fill(palette.accent);
+      g.rect(x + 36, 300, 66, 12).fill(palette.accent);
+    }
+    g.rect(0, 560, WORLD.width, 50).fill(0x3b211c);
+    for (let x = 0; x < WORLD.width; x += 72) {
+      g.rect(x, 560, 34, 50).fill(0x8b5e34);
+    }
+    this.world.addChild(g);
+  }
+
+  private drawLabBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 88, WORLD.width, 500).fill(0x102833);
+    for (let x = 72; x < WORLD.width; x += 165) {
+      g.rect(x, 142, 88, 160).fill(0x061118);
+      g.rect(x + 10, 154, 68, 120).fill(0x1f5664);
+      g.rect(x + 22, 172, 44, 62).fill({ color: 0x5de0e6, alpha: 0.55 });
+      g.rect(x + 14, 288, 60, 8).fill(palette.accent);
+    }
+    for (let x = 30; x < WORLD.width; x += 120) {
+      g.rect(x, 430, 70, 88).fill(0x14343f);
+      g.rect(x + 10, 440, 50, 12).fill(0xff4d6d);
+      g.rect(x + 16, 470, 38, 32).fill(0x5de0e6);
+    }
+    g.rect(0, 560, WORLD.width, 34).fill(0x061118);
+    this.world.addChild(g);
+  }
+
+  private drawHarborBackdrop(palette: (typeof THEME_PALETTES)[MapConfig["theme"]]): void {
+    const g = new Graphics();
+    g.rect(0, 410, WORLD.width, 180).fill(0x1f6270);
+    for (let x = -40; x < WORLD.width; x += 150) {
+      g.rect(x, 440 + ((x / 10) % 18), 90, 8).fill({ color: 0x78c6a3, alpha: 0.45 });
+      g.rect(x + 36, 484, 70, 8).fill({ color: 0xc0a15b, alpha: 0.34 });
+    }
+    for (let x = 90; x < WORLD.width; x += 240) {
+      g.rect(x, 300, 92, 74).fill(0x7d6846);
+      g.poly([x - 8, 300, x + 46, 256, x + 100, 300]).fill(0xf4d35e);
+      g.rect(x + 26, 324, 22, 50).fill(0x3b2f21);
+      g.rect(x + 58, 322, 18, 20).fill(0x78c6a3);
+      g.rect(x + 118, 245, 12, 190).fill(0x3b2f21);
+      g.rect(x + 102, 258, 44, 18).fill(0xf4d35e);
+    }
+    g.rect(0, 570, WORLD.width, 44).fill(0x3b2f21);
+    this.world.addChild(g);
   }
 
   private drawHazards(map: MapConfig): void {
