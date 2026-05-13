@@ -508,6 +508,155 @@ kbd {
   gap: 2px;
 }
 
+.cat-preview-card {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cat-nav {
+  min-height: 48px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.cat-preview {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-align: center;
+}
+
+.cat-preview strong {
+  font-size: 1.25rem;
+}
+
+.cat-preview > span {
+  color: #b8c4d8;
+  font-size: 0.9rem;
+}
+
+.css-cat {
+  --cat-body: #f28c28;
+  --cat-accent: #ffcf75;
+  --cat-ear: #ffb347;
+  position: relative;
+  width: 132px;
+  height: 112px;
+}
+
+.css-cat span {
+  position: absolute;
+  display: block;
+}
+
+.css-cat .body {
+  right: 22px;
+  bottom: 20px;
+  width: 72px;
+  height: 42px;
+  border-radius: 45% 50% 42% 45%;
+  background: var(--cat-body);
+  box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.08);
+}
+
+.css-cat .head {
+  left: 20px;
+  bottom: 43px;
+  width: 52px;
+  height: 46px;
+  border-radius: 45% 45% 48% 48%;
+  background: var(--cat-body);
+  box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.08);
+}
+
+.css-cat .ear {
+  bottom: 78px;
+  width: 20px;
+  height: 24px;
+  background: var(--cat-ear);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.css-cat .ear.left {
+  left: 24px;
+  transform: rotate(-12deg);
+}
+
+.css-cat .ear.right {
+  left: 53px;
+  transform: rotate(17deg);
+}
+
+.css-cat .eye {
+  bottom: 64px;
+  width: 9px;
+  height: 12px;
+  border-radius: 50%;
+  background: #111827;
+  box-shadow: inset 2px 2px 0 #ffffff;
+}
+
+.css-cat .eye.left {
+  left: 34px;
+}
+
+.css-cat .eye.right {
+  left: 54px;
+}
+
+.css-cat .muzzle {
+  left: 38px;
+  bottom: 51px;
+  width: 23px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--cat-accent);
+}
+
+.css-cat .tail {
+  right: 0;
+  bottom: 43px;
+  width: 42px;
+  height: 42px;
+  border: 8px solid var(--cat-body);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(33deg);
+}
+
+.css-cat .leg {
+  bottom: 12px;
+  width: 14px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--cat-body);
+}
+
+.css-cat .leg.left {
+  left: 54px;
+}
+
+.css-cat .leg.right {
+  right: 32px;
+}
+
+.css-cat.striped .body,
+.css-cat.striped .head {
+  background:
+    repeating-linear-gradient(78deg, transparent 0 11px, rgba(0, 0, 0, 0.26) 12px 16px),
+    var(--cat-body);
+}
+
 .room-cat-grid {
   grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   margin-top: 0;

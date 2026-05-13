@@ -13,29 +13,34 @@ function createCatTextures(scene: Phaser.Scene): void {
     const graphics = scene.make.graphics({ x: 0, y: 0 }, false);
     graphics.clear();
     graphics.fillStyle(cat.ear, 1);
-    graphics.fillTriangle(8, 16, 15, 4, 20, 18);
-    graphics.fillTriangle(34, 18, 39, 4, 48, 16);
+    graphics.fillTriangle(9, 15, 16, 3, 21, 17);
+    graphics.fillTriangle(31, 17, 37, 3, 46, 15);
     graphics.fillStyle(cat.body, 1);
-    graphics.fillRoundedRect(8, 15, 42, 34, 11);
-    graphics.fillCircle(47, 37, 7);
+    graphics.fillRoundedRect(10, 15, 34, 30, 12);
+    graphics.fillEllipse(43, 34, 13, 17);
     graphics.fillStyle(cat.accent, 1);
-    graphics.fillRoundedRect(18, 28, 19, 16, 7);
+    graphics.fillEllipse(27, 32, 15, 13);
     if (cat.id === "striped") {
-      graphics.lineStyle(3, cat.accent, 1);
-      graphics.lineBetween(17, 17, 15, 29);
-      graphics.lineBetween(29, 15, 29, 27);
-      graphics.lineBetween(41, 17, 43, 29);
+      graphics.lineStyle(2, cat.accent, 1);
+      graphics.lineBetween(18, 17, 15, 28);
+      graphics.lineBetween(28, 15, 28, 26);
+      graphics.lineBetween(38, 17, 41, 29);
     }
-    graphics.fillCircle(23, 25, 3);
-    graphics.fillCircle(36, 25, 3);
+    graphics.fillCircle(23, 25, 3.2);
+    graphics.fillCircle(34, 25, 3.2);
     graphics.fillStyle(0x111111, 1);
-    graphics.fillCircle(23, 25, 1.5);
-    graphics.fillCircle(36, 25, 1.5);
+    graphics.fillCircle(23, 25, 1.4);
+    graphics.fillCircle(34, 25, 1.4);
+    graphics.fillStyle(cat.accent, 1);
+    graphics.fillEllipse(28, 30, 5, 4);
     graphics.lineStyle(2, cat.accent, 1);
     graphics.beginPath();
-    graphics.arc(10, 39, 10, Phaser.Math.DegToRad(70), Phaser.Math.DegToRad(220), true);
+    graphics.arc(12, 37, 11, Phaser.Math.DegToRad(74), Phaser.Math.DegToRad(222), true);
     graphics.strokePath();
-    graphics.generateTexture(`cat-${cat.id}`, 58, 54);
+    graphics.lineStyle(2, cat.body, 1);
+    graphics.lineBetween(18, 44, 16, 50);
+    graphics.lineBetween(36, 44, 38, 50);
+    graphics.generateTexture(`cat-${cat.id}`, 52, 52);
     graphics.destroy();
   }
 }

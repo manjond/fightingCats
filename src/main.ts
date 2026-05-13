@@ -6,6 +6,7 @@ import {
   createRoom,
   defaultSettings,
   fillWithBots,
+  getRoom,
   joinRoom,
   normalizeSettings,
   quickPlay,
@@ -44,10 +45,12 @@ document.documentElement.lang = language;
 let localPlayer = createLocalPlayer();
 let activeRoom: RoomSnapshot | null = null;
 let latestResult: MatchResult | null = null;
+let roomPollId: number | null = null;
 
 renderHome();
 
 function renderHome(): void {
+  clearRoomPolling();
   destroyGame();
   appRoot.innerHTML = `
     <main class="shell">
@@ -91,9 +94,9 @@ function renderHome(): void {
 
   bindPlayerControls();
   bindLanguageSwitch(renderHome);
-  document.querySelector("#quick-play")?.addEventListener("click", () => {
+  document.querySelector("#quick-play")?.addEventListener("click", async () => {
     syncLocalPlayer();
-    activeRoom = quickPlay(localPlayer);
+    activeRoom = await quickPlay(localPlayer);
     syncLocalPlayerFromRoom(activeRoom);
     renderRoom(activeRoom);
   });
@@ -102,11 +105,11 @@ function renderHome(): void {
     document.querySelector("#join-form")?.classList.toggle("hidden");
     document.querySelector<HTMLInputElement>("#room-code")?.focus();
   });
-  document.querySelector("#join-form")?.addEventListener("submit", (event) => {
+  document.querySelector("#join-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     syncLocalPlayer();
     const code = document.querySelector<HTMLInputElement>("#room-code")?.value ?? "";
-    const room = joinRoom(code, localPlayer);
+    const room = await joinRoom(code, localPlayer);
     if (!room) {
       showToast(t("roomNotFound"));
       return;
@@ -118,6 +121,7 @@ function renderHome(): void {
 }
 
 function renderCreateRoom(): void {
+  clearRoomPolling();
   const settings = { ...defaultSettings };
   appRoot.innerHTML = `
     <main class="shell">
@@ -184,7 +188,7 @@ function renderCreateRoom(): void {
   document.querySelector("#mode")?.addEventListener("change", updateCustomFields);
   updateCustomFields();
 
-  document.querySelector("#room-form")?.addEventListener("submit", (event) => {
+  document.querySelector("#room-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     syncLocalPlayer();
     const selectedMaps = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="maps"]:checked')).map((input) => input.value);
@@ -197,13 +201,14 @@ function renderCreateRoom(): void {
       startingWeapon: readSelect("starting-weapon") as WeaponId,
     });
 
-    activeRoom = createRoom(localPlayer, nextSettings);
+    activeRoom = await createRoom(localPlayer, nextSettings);
     syncLocalPlayerFromRoom(activeRoom);
     renderRoom(activeRoom);
   });
 }
 
 function renderRoom(room: RoomSnapshot): void {
+  clearRoomPolling();
   syncLocalPlayerFromRoom(room);
   const occupiedCats = new Map(room.players.filter((player) => player.id !== localPlayer.id).map((player) => [player.cat, player.name]));
 
@@ -246,19 +251,7 @@ function renderRoom(room: RoomSnapshot): void {
                 <p class="eyebrow">${t("yourCat")}</p>
                 <h2>${t("chooseFighter")}</h2>
               </div>
-              <div class="cat-grid room-cat-grid" aria-label="Selector de gato en sala">
-                ${CATS.map((cat) => {
-                  const owner = occupiedCats.get(cat.id);
-                  const selected = localPlayer.cat === cat.id;
-                  return `
-                    <button class="cat-chip ${selected ? "selected" : ""} ${owner ? "taken" : ""}" data-room-cat="${cat.id}" ${owner ? "disabled" : ""}>
-                      <span class="cat-dot" style="background:#${cat.body.toString(16).padStart(6, "0")}"></span>
-                      <span>${catName(cat.id)}</span>
-                      <small>${owner ? `${t("occupiedBy")} ${escapeHtml(owner)}` : selected ? t("selectedCat") : t("free")}</small>
-                    </button>
-                  `;
-                }).join("")}
-              </div>
+              ${renderCatPreview(occupiedCats)}
             </div>
 
             <div class="room-summary">
@@ -275,21 +268,24 @@ function renderRoom(room: RoomSnapshot): void {
 
   document.querySelector("#back-home")?.addEventListener("click", renderHome);
   bindLanguageSwitch(() => renderRoom(room));
-  document.querySelectorAll<HTMLButtonElement>("[data-room-cat]").forEach((button) => {
-    button.addEventListener("click", () => {
-      localPlayer = { ...localPlayer, cat: button.dataset.roomCat as CatId };
-      activeRoom = roomWithUpdatedHost(room, localPlayer);
+  document.querySelectorAll<HTMLButtonElement>("[data-cat-step]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      localPlayer = { ...localPlayer, cat: nextAvailableCat(Number(button.dataset.catStep), occupiedCats) };
+      activeRoom = await roomWithUpdatedHost(room, localPlayer);
       renderRoom(activeRoom);
     });
   });
-  document.querySelector("#start-match")?.addEventListener("click", () => {
-    const readyRoom = fillWithBots(roomWithUpdatedHost(room, localPlayer));
+  document.querySelector("#start-match")?.addEventListener("click", async () => {
+    const updatedRoom = await roomWithUpdatedHost(room, localPlayer);
+    const readyRoom = fillWithBots(updatedRoom);
     activeRoom = readyRoom;
     renderGame(readyRoom);
   });
+  startRoomPolling(room.code);
 }
 
 function renderGame(room: RoomSnapshot): void {
+  clearRoomPolling();
   latestResult = null;
   appRoot.innerHTML = `
     <main class="game-shell">
@@ -401,6 +397,27 @@ function syncLocalPlayerFromRoom(room: RoomSnapshot): void {
   }
 }
 
+function startRoomPolling(code: string): void {
+  roomPollId = window.setInterval(async () => {
+    const latestRoom = await getRoom(code);
+    if (!latestRoom || activeRoom?.code !== code) {
+      return;
+    }
+
+    if (JSON.stringify(latestRoom.players) !== JSON.stringify(activeRoom.players)) {
+      activeRoom = latestRoom;
+      renderRoom(latestRoom);
+    }
+  }, 1800);
+}
+
+function clearRoomPolling(): void {
+  if (roomPollId !== null) {
+    window.clearInterval(roomPollId);
+    roomPollId = null;
+  }
+}
+
 function updateCustomFields(): void {
   const custom = readSelect("mode") === "custom";
   document.querySelectorAll<HTMLInputElement | HTMLSelectElement>("#rounds, #starting-weapon, .map-picker input").forEach((field) => {
@@ -464,6 +481,54 @@ function renderControlsSummary(): string {
       </div>
     </section>
   `;
+}
+
+function renderCatPreview(occupiedCats: Map<CatId, string>): string {
+  const cat = CATS.find((candidate) => candidate.id === localPlayer.cat) ?? CATS[0];
+  const body = `#${cat.body.toString(16).padStart(6, "0")}`;
+  const accent = `#${cat.accent.toString(16).padStart(6, "0")}`;
+  const ear = `#${cat.ear.toString(16).padStart(6, "0")}`;
+  const takenCount = occupiedCats.size;
+
+  return `
+    <div class="cat-preview-card">
+      <button class="cat-nav" type="button" data-cat-step="-1" aria-label="Previous cat">&lt;</button>
+      <div class="cat-preview">
+        <div class="css-cat ${cat.id === "striped" ? "striped" : ""}" style="--cat-body:${body};--cat-accent:${accent};--cat-ear:${ear};">
+          <span class="tail"></span>
+          <span class="body"></span>
+          <span class="head"></span>
+          <span class="ear left"></span>
+          <span class="ear right"></span>
+          <span class="eye left"></span>
+          <span class="eye right"></span>
+          <span class="muzzle"></span>
+          <span class="leg left"></span>
+          <span class="leg right"></span>
+        </div>
+        <strong>${catName(cat.id)}</strong>
+        <span>${t("selectedCat")} · ${CATS.length - takenCount}/${CATS.length} ${t("free")}</span>
+      </div>
+      <button class="cat-nav" type="button" data-cat-step="1" aria-label="Next cat">&gt;</button>
+    </div>
+  `;
+}
+
+function nextAvailableCat(step: number, occupiedCats: Map<CatId, string>): CatId {
+  const currentIndex = Math.max(
+    0,
+    CATS.findIndex((cat) => cat.id === localPlayer.cat),
+  );
+
+  for (let offset = 1; offset <= CATS.length; offset += 1) {
+    const index = (currentIndex + step * offset + CATS.length) % CATS.length;
+    const cat = CATS[index];
+    if (!occupiedCats.has(cat.id)) {
+      return cat.id;
+    }
+  }
+
+  return localPlayer.cat;
 }
 
 function renderMapPreview(map: MapConfig): string {

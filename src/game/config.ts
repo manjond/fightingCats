@@ -4,8 +4,9 @@ export const WORLD = {
   width: 1280,
   height: 720,
   gravity: 1650,
-  playerSpeed: 260,
-  jumpVelocity: -610,
+  playerSpeed: 330,
+  jumpVelocity: -660,
+  airJumpVelocity: -590,
   maxHealth: 100,
   maxPlayers: 8,
 };

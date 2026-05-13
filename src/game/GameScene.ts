@@ -17,6 +17,8 @@ interface Actor {
   lastHazardAt: number;
   facing: 1 | -1;
   speedBoostUntil: number;
+  jumpsUsed: number;
+  jumpHeld: boolean;
 }
 
 interface ProjectileData {
@@ -195,9 +197,9 @@ export class GameScene extends Phaser.Scene {
       const sprite = this.physics.add.sprite(spawn.x, spawn.y, `cat-${player.cat}`);
       sprite.setCollideWorldBounds(true);
       sprite.setBounce(0.05, 0);
-      sprite.setDragX(1250);
-      sprite.setMaxVelocity(520, 900);
-      sprite.body?.setSize(36, 42).setOffset(10, 11);
+      sprite.setDragX(1650);
+      sprite.setMaxVelocity(620, 960);
+      sprite.body?.setSize(30, 38).setOffset(11, 7);
       sprite.setData("playerId", player.id);
 
       const nameTag = this.add
@@ -225,6 +227,8 @@ export class GameScene extends Phaser.Scene {
         lastHazardAt: 0,
         facing: 1,
         speedBoostUntil: 0,
+        jumpsUsed: 0,
+        jumpHeld: false,
       };
 
       this.actors.push(actor);
@@ -292,15 +296,20 @@ export class GameScene extends Phaser.Scene {
   private moveActor(actor: Actor, left: boolean, right: boolean, jump: boolean): void {
     const body = actor.sprite.body as Phaser.Physics.Arcade.Body;
     const speed = WORLD.playerSpeed * (actor.speedBoostUntil > this.time.now ? 1.45 : 1);
+    const jumpPressed = jump && !actor.jumpHeld;
+
+    if (body.blocked.down) {
+      actor.jumpsUsed = 0;
+    }
 
     if (left === right) {
       actor.sprite.setAccelerationX(0);
     } else if (left) {
-      actor.sprite.setAccelerationX(-speed * 8);
+      actor.sprite.setAccelerationX(-speed * 9.4);
       actor.facing = -1;
       actor.sprite.setFlipX(true);
     } else if (right) {
-      actor.sprite.setAccelerationX(speed * 8);
+      actor.sprite.setAccelerationX(speed * 9.4);
       actor.facing = 1;
       actor.sprite.setFlipX(false);
     }
@@ -311,9 +320,14 @@ export class GameScene extends Phaser.Scene {
       actor.sprite.setVelocityX(-speed);
     }
 
-    if (jump && body.blocked.down) {
-      actor.sprite.setVelocityY(WORLD.jumpVelocity);
+    if (jumpPressed && actor.jumpsUsed < 2) {
+      actor.sprite.setVelocityY(actor.jumpsUsed === 0 ? WORLD.jumpVelocity : WORLD.airJumpVelocity);
+      actor.jumpsUsed += 1;
+      const puff = this.add.circle(actor.sprite.x, actor.sprite.y + 20, 14, 0xffffff, 0.18);
+      this.tweens.add({ targets: puff, alpha: 0, scale: 1.8, duration: 180, onComplete: () => puff.destroy() });
     }
+
+    actor.jumpHeld = jump;
   }
 
   private tryAttack(actor: Actor, weaponId: WeaponId, time: number): void {

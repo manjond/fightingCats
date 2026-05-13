@@ -13,9 +13,11 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@types/node": "^25.7.0",
     "typescript": "^5.9.3",
     "vite": "^7.2.7"
   }

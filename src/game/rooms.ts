@@ -24,7 +24,13 @@ export function createLocalPlayer(name = "Player 1"): PlayerSetup {
   };
 }
 
-export function createRoom(host: PlayerSetup, settings: RoomSettings): RoomSnapshot {
+export async function createRoom(host: PlayerSetup, settings: RoomSettings): Promise<RoomSnapshot> {
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("create", { player: host, settings });
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return remoteRoom;
+  }
+
   const assignedHost = withAvailableCat(host, []);
   const room: RoomSnapshot = {
     code: makeCode(),
@@ -38,7 +44,13 @@ export function createRoom(host: PlayerSetup, settings: RoomSettings): RoomSnaps
   return room;
 }
 
-export function quickPlay(player: PlayerSetup): RoomSnapshot {
+export async function quickPlay(player: PlayerSetup): Promise<RoomSnapshot> {
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("quick", { player });
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return remoteRoom;
+  }
+
   const rooms = loadRooms();
   const available = rooms.find(
     (room) =>
@@ -60,7 +72,13 @@ export function quickPlay(player: PlayerSetup): RoomSnapshot {
   return joined;
 }
 
-export function joinRoom(code: string, player: PlayerSetup): RoomSnapshot | null {
+export async function joinRoom(code: string, player: PlayerSetup): Promise<RoomSnapshot | null> {
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("join", { code, player });
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return remoteRoom;
+  }
+
   const normalizedCode = code.trim().toUpperCase();
   const room = loadRooms().find((candidate) => candidate.code === normalizedCode);
   if (!room || room.players.length >= room.settings.maxPlayers) {
@@ -98,7 +116,23 @@ export function fillWithBots(room: RoomSnapshot): RoomSnapshot {
   };
 }
 
-export function roomWithUpdatedHost(room: RoomSnapshot, player: PlayerSetup): RoomSnapshot {
+export async function getRoom(code: string): Promise<RoomSnapshot | null> {
+  const remoteRoom = await fetchRoom(code);
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return remoteRoom;
+  }
+
+  return loadRooms().find((candidate) => candidate.code === code.trim().toUpperCase()) ?? null;
+}
+
+export async function roomWithUpdatedHost(room: RoomSnapshot, player: PlayerSetup): Promise<RoomSnapshot> {
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("update-player", { code: room.code, player });
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return remoteRoom;
+  }
+
   const otherPlayers = room.players.filter((candidate) => candidate.id !== player.id);
   const assignedPlayer = withAvailableCat(player, otherPlayers);
   const players = room.players.map((candidate) => (candidate.id === assignedPlayer.id ? assignedPlayer : candidate));
@@ -164,4 +198,32 @@ function withAvailableCat(player: PlayerSetup, existingPlayers: PlayerSetup[]): 
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+async function callRoomsApi<T>(action: string, payload: Record<string, unknown>): Promise<T | null> {
+  try {
+    const response = await fetch("/api/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchRoom(code: string): Promise<RoomSnapshot | null> {
+  try {
+    const response = await fetch(`/api/rooms?code=${encodeURIComponent(code.trim().toUpperCase())}`);
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as RoomSnapshot;
+  } catch {
+    return null;
+  }
 }
