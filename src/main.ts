@@ -95,10 +95,14 @@ function renderHome(): void {
   bindPlayerControls();
   bindLanguageSwitch(renderHome);
   document.querySelector("#quick-play")?.addEventListener("click", async () => {
-    syncLocalPlayer();
-    activeRoom = await quickPlay(localPlayer);
-    syncLocalPlayerFromRoom(activeRoom);
-    renderRoom(activeRoom);
+    try {
+      syncLocalPlayer();
+      activeRoom = await quickPlay(localPlayer);
+      syncLocalPlayerFromRoom(activeRoom);
+      renderRoom(activeRoom);
+    } catch (error) {
+      reportRoomError(error);
+    }
   });
   document.querySelector("#create-room")?.addEventListener("click", () => renderCreateRoom());
   document.querySelector("#show-join")?.addEventListener("click", () => {
@@ -107,16 +111,20 @@ function renderHome(): void {
   });
   document.querySelector("#join-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    syncLocalPlayer();
-    const code = document.querySelector<HTMLInputElement>("#room-code")?.value ?? "";
-    const room = await joinRoom(code, localPlayer);
-    if (!room) {
-      showToast(t("roomNotFound"));
-      return;
+    try {
+      syncLocalPlayer();
+      const code = document.querySelector<HTMLInputElement>("#room-code")?.value ?? "";
+      const room = await joinRoom(code, localPlayer);
+      if (!room) {
+        showToast(t("roomNotFound"));
+        return;
+      }
+      activeRoom = room;
+      syncLocalPlayerFromRoom(activeRoom);
+      renderRoom(activeRoom);
+    } catch (error) {
+      reportRoomError(error);
     }
-    activeRoom = room;
-    syncLocalPlayerFromRoom(activeRoom);
-    renderRoom(activeRoom);
   });
 }
 
@@ -201,9 +209,13 @@ function renderCreateRoom(): void {
       startingWeapon: readSelect("starting-weapon") as WeaponId,
     });
 
-    activeRoom = await createRoom(localPlayer, nextSettings);
-    syncLocalPlayerFromRoom(activeRoom);
-    renderRoom(activeRoom);
+    try {
+      activeRoom = await createRoom(localPlayer, nextSettings);
+      syncLocalPlayerFromRoom(activeRoom);
+      renderRoom(activeRoom);
+    } catch (error) {
+      reportRoomError(error);
+    }
   });
 }
 
@@ -270,16 +282,24 @@ function renderRoom(room: RoomSnapshot): void {
   bindLanguageSwitch(() => renderRoom(room));
   document.querySelectorAll<HTMLButtonElement>("[data-cat-step]").forEach((button) => {
     button.addEventListener("click", async () => {
-      localPlayer = { ...localPlayer, cat: nextAvailableCat(Number(button.dataset.catStep), occupiedCats) };
-      activeRoom = await roomWithUpdatedHost(room, localPlayer);
-      renderRoom(activeRoom);
+      try {
+        localPlayer = { ...localPlayer, cat: nextAvailableCat(Number(button.dataset.catStep), occupiedCats) };
+        activeRoom = await roomWithUpdatedHost(room, localPlayer);
+        renderRoom(activeRoom);
+      } catch (error) {
+        reportRoomError(error);
+      }
     });
   });
   document.querySelector("#start-match")?.addEventListener("click", async () => {
-    const updatedRoom = await roomWithUpdatedHost(room, localPlayer);
-    const readyRoom = fillWithBots(updatedRoom);
-    activeRoom = readyRoom;
-    renderGame(readyRoom);
+    try {
+      const updatedRoom = await roomWithUpdatedHost(room, localPlayer);
+      const readyRoom = fillWithBots(updatedRoom);
+      activeRoom = readyRoom;
+      renderGame(readyRoom);
+    } catch (error) {
+      reportRoomError(error);
+    }
   });
   startRoomPolling(room.code);
 }
@@ -399,14 +419,18 @@ function syncLocalPlayerFromRoom(room: RoomSnapshot): void {
 
 function startRoomPolling(code: string): void {
   roomPollId = window.setInterval(async () => {
-    const latestRoom = await getRoom(code);
-    if (!latestRoom || activeRoom?.code !== code) {
-      return;
-    }
+    try {
+      const latestRoom = await getRoom(code);
+      if (!latestRoom || activeRoom?.code !== code) {
+        return;
+      }
 
-    if (JSON.stringify(latestRoom.players) !== JSON.stringify(activeRoom.players)) {
-      activeRoom = latestRoom;
-      renderRoom(latestRoom);
+      if (JSON.stringify(latestRoom.players) !== JSON.stringify(activeRoom.players)) {
+        activeRoom = latestRoom;
+        renderRoom(latestRoom);
+      }
+    } catch (error) {
+      console.error("[rooms-api]", error);
     }
   }, 1800);
 }
@@ -621,6 +645,11 @@ function showToast(message: string): void {
   toast.textContent = message;
   document.body.append(toast);
   setTimeout(() => toast.remove(), 2200);
+}
+
+function reportRoomError(error: unknown): void {
+  console.error("[rooms-api]", error);
+  showToast(t("roomServiceError"));
 }
 
 function escapeHtml(value: string): string {

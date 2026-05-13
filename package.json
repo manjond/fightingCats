@@ -13,7 +13,6 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@upstash/redis": "^1.38.0",
     "pixi.js": "^8.18.1"
   },
   "devDependencies": {

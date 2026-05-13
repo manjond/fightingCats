@@ -6,6 +6,16 @@ const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const BOT_NAMES = ["Miso", "Pixel", "Nube", "Taco", "Bowie", "Lua", "Kiro"];
 
+class RoomsApiError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "RoomsApiError";
+  }
+}
+
 export const defaultSettings: RoomSettings = {
   visibility: "public",
   mode: "standard",
@@ -31,6 +41,8 @@ export async function createRoom(host: PlayerSetup, settings: RoomSettings): Pro
     return remoteRoom;
   }
 
+  assertLocalRoomsAllowed();
+
   const assignedHost = withAvailableCat(host, []);
   const room: RoomSnapshot = {
     code: makeCode(),
@@ -50,6 +62,8 @@ export async function quickPlay(player: PlayerSetup): Promise<RoomSnapshot> {
     saveRoom(remoteRoom);
     return remoteRoom;
   }
+
+  assertLocalRoomsAllowed();
 
   const rooms = loadRooms();
   const available = rooms.find(
@@ -73,10 +87,14 @@ export async function quickPlay(player: PlayerSetup): Promise<RoomSnapshot> {
 }
 
 export async function joinRoom(code: string, player: PlayerSetup): Promise<RoomSnapshot | null> {
-  const remoteRoom = await callRoomsApi<RoomSnapshot>("join", { code, player });
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("join", { code, player }, { notFoundIsNull: true });
   if (remoteRoom) {
     saveRoom(remoteRoom);
     return remoteRoom;
+  }
+
+  if (!canUseLocalRooms()) {
+    return null;
   }
 
   const normalizedCode = code.trim().toUpperCase();
@@ -132,6 +150,8 @@ export async function roomWithUpdatedHost(room: RoomSnapshot, player: PlayerSetu
     saveRoom(remoteRoom);
     return remoteRoom;
   }
+
+  assertLocalRoomsAllowed();
 
   const otherPlayers = room.players.filter((candidate) => candidate.id !== player.id);
   const assignedPlayer = withAvailableCat(player, otherPlayers);
@@ -196,11 +216,25 @@ function withAvailableCat(player: PlayerSetup, existingPlayers: PlayerSetup[]): 
   };
 }
 
+function canUseLocalRooms(): boolean {
+  return ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
+}
+
+function assertLocalRoomsAllowed(): void {
+  if (!canUseLocalRooms()) {
+    throw new RoomsApiError("Rooms service unavailable");
+  }
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-async function callRoomsApi<T>(action: string, payload: Record<string, unknown>): Promise<T | null> {
+async function callRoomsApi<T>(
+  action: string,
+  payload: Record<string, unknown>,
+  options: { notFoundIsNull?: boolean } = {},
+): Promise<T | null> {
   try {
     const response = await fetch("/api/rooms", {
       method: "POST",
@@ -208,10 +242,18 @@ async function callRoomsApi<T>(action: string, payload: Record<string, unknown>)
       body: JSON.stringify({ action, ...payload }),
     });
     if (!response.ok) {
-      return null;
+      const errorText = await response.text();
+      if (options.notFoundIsNull && response.status === 404) {
+        return null;
+      }
+      throw new RoomsApiError(errorText || `Rooms API failed with ${response.status}`, response.status);
     }
     return (await response.json()) as T;
-  } catch {
+  } catch (error) {
+    console.error("[rooms-api]", error);
+    if (!canUseLocalRooms()) {
+      throw error instanceof Error ? error : new RoomsApiError("Rooms service unavailable");
+    }
     return null;
   }
 }
@@ -220,10 +262,18 @@ async function fetchRoom(code: string): Promise<RoomSnapshot | null> {
   try {
     const response = await fetch(`/api/rooms?code=${encodeURIComponent(code.trim().toUpperCase())}`);
     if (!response.ok) {
+      const errorText = await response.text();
+      if (response.status !== 404) {
+        throw new RoomsApiError(errorText || `Rooms API failed with ${response.status}`, response.status);
+      }
       return null;
     }
     return (await response.json()) as RoomSnapshot;
-  } catch {
+  } catch (error) {
+    console.error("[rooms-api]", error);
+    if (!canUseLocalRooms()) {
+      throw error instanceof Error ? error : new RoomsApiError("Rooms service unavailable");
+    }
     return null;
   }
 }

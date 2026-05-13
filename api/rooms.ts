@@ -1,4 +1,3 @@
-import { Redis } from "@upstash/redis";
 import { CATS, STANDARD_MAP_IDS, WORLD } from "../src/game/config";
 import type { PlayerSetup, RoomSettings, RoomSnapshot, WeaponId } from "../src/game/types";
 
@@ -18,17 +17,11 @@ const defaultSettings: RoomSettings = {
 const redisRestUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
 const redisRestToken = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
-const redis =
-  redisRestUrl && redisRestToken
-    ? new Redis({
-        url: redisRestUrl,
-        token: redisRestToken,
-      })
-    : null;
+type RedisResult<T = unknown> = { result?: T; error?: string };
 
 export default async function handler(req: any, res: any): Promise<void> {
-  if (!redis) {
-    res.status(503).json({ error: "Redis is not configured" });
+  if (!hasRedisConfig()) {
+    res.status(503).json({ error: "Redis REST is not configured" });
     return;
   }
 
@@ -74,7 +67,8 @@ export default async function handler(req: any, res: any): Promise<void> {
 
     res.status(400).json({ error: "Unknown action" });
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : "Unexpected error" });
+    console.error("[rooms-api]", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Unexpected rooms API error" });
   }
 }
 
@@ -149,17 +143,24 @@ async function getRoom(code: string): Promise<RoomSnapshot | null> {
     return null;
   }
 
-  return redis!.get<RoomSnapshot>(roomKey(code.toUpperCase()));
+  const value = await redisCommand<string | RoomSnapshot | null>("GET", roomKey(code.toUpperCase()));
+  if (!value) {
+    return null;
+  }
+
+  return typeof value === "string" ? (JSON.parse(value) as RoomSnapshot) : value;
 }
 
 async function saveRoom(room: RoomSnapshot): Promise<void> {
-  await redis!.set(roomKey(room.code), room, { ex: ROOM_TTL_SECONDS });
-  await redis!.sadd(INDEX_KEY, room.code);
-  await redis!.expire(INDEX_KEY, ROOM_TTL_SECONDS);
+  await redisPipeline([
+    ["SET", roomKey(room.code), JSON.stringify(room), "EX", ROOM_TTL_SECONDS],
+    ["SADD", INDEX_KEY, room.code],
+    ["EXPIRE", INDEX_KEY, ROOM_TTL_SECONDS],
+  ]);
 }
 
 async function loadIndexedRooms(): Promise<RoomSnapshot[]> {
-  const codes = ((await redis!.smembers(INDEX_KEY)) ?? []) as string[];
+  const codes = (await redisCommand<string[]>("SMEMBERS", INDEX_KEY)) ?? [];
   const rooms = await Promise.all(codes.map((code) => getRoom(code)));
   return rooms.filter((room): room is RoomSnapshot => Boolean(room));
 }
@@ -214,4 +215,38 @@ function normalizeSettings(settings: RoomSettings): RoomSettings {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function hasRedisConfig(): boolean {
+  return Boolean(redisRestUrl?.startsWith("https://") && redisRestToken);
+}
+
+async function redisCommand<T>(...command: Array<string | number>): Promise<T> {
+  const [response] = await redisPipeline([command]);
+  return response.result as T;
+}
+
+async function redisPipeline(commands: Array<Array<string | number>>): Promise<Array<RedisResult>> {
+  const url = redisRestUrl!;
+  const token = redisRestToken!;
+  const response = await fetch(`${url}/pipeline`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(commands),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Redis REST ${response.status}: ${await response.text()}`);
+  }
+
+  const payload = (await response.json()) as Array<RedisResult>;
+  const failed = payload.find((item) => item.error);
+  if (failed?.error) {
+    throw new Error(failed.error);
+  }
+
+  return payload;
 }
