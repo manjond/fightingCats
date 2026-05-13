@@ -12,7 +12,7 @@ export type CatId =
   | "blue"
   | "gold";
 
-export type WeaponId = "scratch" | "pistol" | "yarn" | "bomb" | "fishbat" | "sardine" | "spray" | "bell";
+export type WeaponId = "scratch" | "pistol" | "yarn" | "bomb" | "fishbat" | "sardine" | "spray" | "bell" | "kibble" | "feedbag";
 
 export type HazardId = "spikes" | "laser" | "steam";
 
@@ -66,6 +66,7 @@ export interface WeaponConfig {
   projectileSpeed?: number;
   radius?: number;
   knockback: number;
+  uses?: number;
 }
 
 export interface PlayerSetup {

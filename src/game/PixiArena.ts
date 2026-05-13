@@ -22,6 +22,7 @@ type Actor = {
   health: number;
   alive: boolean;
   weapon: WeaponId;
+  weaponUses: number | null;
   weaponAnimationId: WeaponId;
   weaponAnimationStartedAt: number;
   weaponAnimationUntil: number;
@@ -535,6 +536,7 @@ export class PixiArena {
       health: WORLD.maxHealth,
       alive: true,
       weapon: this.match.room.settings.startingWeapon,
+      weaponUses: this.getWeaponUses(this.match.room.settings.startingWeapon),
       weaponAnimationId: this.match.room.settings.startingWeapon,
       weaponAnimationStartedAt: 0,
       weaponAnimationUntil: 0,
@@ -670,6 +672,11 @@ export class PixiArena {
 
   private tryAttack(actor: Actor, weaponId: WeaponId, now: number): void {
     const weapon = WEAPONS[weaponId];
+    if (actor.weaponUses !== null && actor.weaponUses <= 0) {
+      this.equipWeapon(actor, "scratch");
+      return;
+    }
+
     if (now - actor.lastAttackAt < weapon.cooldownMs) {
       return;
     }
@@ -678,10 +685,12 @@ export class PixiArena {
     this.playWeaponAnimation(actor, weaponId, now);
     if (weapon.kind === "melee") {
       this.performMelee(actor, weaponId);
+      this.consumeWeaponUse(actor);
       return;
     }
 
     this.fireProjectile(actor, weaponId, now);
+    this.consumeWeaponUse(actor);
   }
 
   private performMelee(actor: Actor, weaponId: WeaponId): void {
@@ -720,7 +729,7 @@ export class PixiArena {
     });
 
     if (weapon.kind === "explosive") {
-      actor.weapon = "scratch";
+      actor.weaponUses = 0;
     }
   }
 
@@ -771,8 +780,7 @@ export class PixiArena {
       return;
     }
 
-    actor.weapon = pickup.weapon;
-    this.replaceWeaponView(actor, actor.weapon);
+    this.equipWeapon(actor, pickup.weapon);
     this.removePickup(pickup);
     this.setTimer(() => this.createWeaponPickup(pickup.x, pickup.y, pickup.weapon), 6500);
     this.playWeaponAnimation(actor, actor.weapon, now);
@@ -921,7 +929,7 @@ export class PixiArena {
 
     const language = getStoredLanguage();
     const mapName = getMapName(language, getMapById(this.mapOrder[this.roundIndex]).id);
-    const localWeapon = getWeaponName(language, this.localActor.weapon);
+    const localWeapon = this.getWeaponLabel(language, this.localActor);
     const alive = this.actors.filter((actor) => actor.alive).length;
     const ranking = Object.entries(this.scores)
       .sort((a, b) => b[1] - a[1])
@@ -980,6 +988,32 @@ export class PixiArena {
     actor.weaponView = this.drawWeapon(actor.setup.cat, weapon);
     actor.weaponViewId = weapon;
     actor.view.addChildAt(actor.weaponView, 1);
+  }
+
+  private equipWeapon(actor: Actor, weapon: WeaponId): void {
+    actor.weapon = weapon;
+    actor.weaponUses = this.getWeaponUses(weapon);
+    this.replaceWeaponView(actor, weapon);
+  }
+
+  private consumeWeaponUse(actor: Actor): void {
+    if (actor.weaponUses === null) {
+      return;
+    }
+
+    actor.weaponUses -= 1;
+    if (actor.weaponUses <= 0) {
+      this.equipWeapon(actor, "scratch");
+    }
+  }
+
+  private getWeaponUses(weapon: WeaponId): number | null {
+    return WEAPONS[weapon].uses ?? null;
+  }
+
+  private getWeaponLabel(language: ReturnType<typeof getStoredLanguage>, actor: Actor): string {
+    const name = getWeaponName(language, actor.weapon);
+    return actor.weaponUses === null ? name : `${name} x${Math.max(0, actor.weaponUses)}`;
   }
 
   private createWeaponPickup(x: number, y: number, weapon: WeaponId): void {
@@ -1046,8 +1080,8 @@ export class PixiArena {
   private addMeleeHitSpark(actor: Actor, weaponId: WeaponId): void {
     const spark = new Container();
     const g = new Graphics();
-    const color = weaponId === "fishbat" ? 0x9ee6c1 : 0xf8fafc;
-    spark.x = actor.x + actor.facing * (weaponId === "fishbat" ? 48 : 34);
+    const color = weaponId === "fishbat" ? 0x9ee6c1 : weaponId === "feedbag" ? 0xffdf9e : 0xf8fafc;
+    spark.x = actor.x + actor.facing * (weaponId === "fishbat" ? 48 : weaponId === "feedbag" ? 42 : 34);
     spark.y = actor.y - 8;
     spark.scale.x = actor.facing;
 
@@ -1145,6 +1179,14 @@ export class PixiArena {
       g.poly([7, -12, 20, -17, 13, -4]).fill(0xf8fafc);
       g.poly([10, -1, 24, -2, 14, 8]).fill(0xf8fafc);
       g.poly([6, 11, 18, 16, 12, 4]).fill(0xf8fafc);
+    } else if (weapon === "feedbag") {
+      g.rect(-17, -14, 34, 29).fill(OUTLINE);
+      g.rect(-14, -11, 28, 24).fill(0xb76e4f);
+      g.rect(-10, -15, 20, 8).fill(0xffdf9e);
+      g.rect(-8, -4, 16, 5).fill(0xffd166);
+      g.rect(-7, 5, 14, 3).fill(0x6b342b);
+      g.rect(9, -10, 5, 20).fill(0x8b4a35);
+      g.rect(-14, 10, 28, 5).fill(0x6b342b);
     } else if (weapon === "pistol") {
       g.rect(-18, -8, 34, 14).fill(OUTLINE);
       g.rect(-5, 5, 12, 13).fill(OUTLINE);
@@ -1193,6 +1235,15 @@ export class PixiArena {
       g.rect(-8, -12, 3, 24).fill(0xffc2d6);
       g.rect(2, -12, 3, 24).fill(0xffc2d6);
       g.rect(-10, 6, 19, 3).fill(0x9d3b6d);
+    } else if (weapon === "kibble") {
+      g.rect(-13, -11, 26, 24).fill(OUTLINE);
+      g.rect(-4, -18, 7, 9).fill(OUTLINE);
+      g.rect(-10, -8, 20, 18).fill(0xc46b3a);
+      g.rect(-5, -4, 8, 5).fill(0xffb86b);
+      g.rect(3, 5, 5, 3).fill(0x7c351f);
+      g.rect(-3, -17, 5, 8).fill(0xf4d35e);
+      g.rect(3, -20, 12, 3).fill(0xff7f50);
+      g.rect(14, -23, 4, 4).fill(0xffd166);
     } else {
       g.rect(-14, -13, 28, 28).fill(OUTLINE);
       g.rect(-4, -19, 7, 9).fill(OUTLINE);

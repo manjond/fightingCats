@@ -44,6 +44,17 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     cooldownMs: 720,
     range: 88,
     knockback: 470,
+    uses: 10,
+  },
+  feedbag: {
+    id: "feedbag",
+    name: "Bolsa de pienso",
+    kind: "melee",
+    damage: 32,
+    cooldownMs: 880,
+    range: 76,
+    knockback: 620,
+    uses: 6,
   },
   pistol: {
     id: "pistol",
@@ -54,6 +65,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     range: 760,
     projectileSpeed: 760,
     knockback: 230,
+    uses: 8,
   },
   sardine: {
     id: "sardine",
@@ -64,6 +76,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     range: 540,
     projectileSpeed: 680,
     knockback: 280,
+    uses: 3,
   },
   spray: {
     id: "spray",
@@ -74,6 +87,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     range: 360,
     projectileSpeed: 620,
     knockback: 180,
+    uses: 12,
   },
   yarn: {
     id: "yarn",
@@ -85,6 +99,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     projectileSpeed: 520,
     radius: 18,
     knockback: 360,
+    uses: 4,
   },
   bomb: {
     id: "bomb",
@@ -96,6 +111,19 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     projectileSpeed: 390,
     radius: 82,
     knockback: 540,
+    uses: 1,
+  },
+  kibble: {
+    id: "kibble",
+    name: "Croqueta explosiva",
+    kind: "explosive",
+    damage: 46,
+    cooldownMs: 1150,
+    range: 460,
+    projectileSpeed: 500,
+    radius: 72,
+    knockback: 610,
+    uses: 1,
   },
   bell: {
     id: "bell",
@@ -107,6 +135,7 @@ export const WEAPONS: Record<WeaponId, WeaponConfig> = {
     projectileSpeed: 470,
     radius: 58,
     knockback: 390,
+    uses: 1,
   },
 };
 
