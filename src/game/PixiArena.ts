@@ -55,8 +55,12 @@ type Projectile = {
 };
 
 const OUTLINE = 0x0b1020;
-const DRAG_X = 1650;
-const MAX_VX = 620;
+const GROUND_ACCELERATION = 5600;
+const AIR_ACCELERATION = 3900;
+const GROUND_DECELERATION = 5200;
+const AIR_DECELERATION = 2800;
+const ARENA_GRAVITY = WORLD.gravity * 1.12;
+const MAX_VX = 590;
 const MAX_VY = 960;
 
 const THEME_PALETTES: Record<MapConfig["theme"], { sky: number; far: number; mid: number; accent: number; platform: number; top: number; trim: number }> = {
@@ -93,6 +97,7 @@ export class PixiArena {
   private roundFinished = false;
   private destroyed = false;
   private initialized = false;
+  private hitStopUntil = 0;
   private lastTime = performance.now();
 
   constructor(
@@ -169,6 +174,11 @@ export class PixiArena {
 
   private tick = (_ticker: Ticker): void => {
     const now = performance.now();
+    if (now < this.hitStopUntil) {
+      this.lastTime = now;
+      return;
+    }
+
     const delta = Math.min(0.033, (now - this.lastTime) / 1000);
     this.lastTime = now;
     this.update(now, delta);
@@ -203,18 +213,23 @@ export class PixiArena {
       return;
     }
 
-    for (const actor of this.actors) {
-      if (!actor.alive) {
-        continue;
-      }
+    const aliveActors = this.actors.filter((actor) => actor.alive);
 
+    for (const actor of aliveActors) {
       if (actor.setup.bot) {
         this.updateBot(actor, now, delta);
       } else {
         this.updateLocalActor(actor, now, delta);
       }
+    }
 
+    for (const actor of aliveActors) {
       this.integrateActor(actor, delta);
+    }
+
+    this.resolvePlayerCollisions();
+
+    for (const actor of aliveActors) {
       this.checkActorPickups(actor, now);
       this.checkActorBoosters(actor);
       this.checkActorHazards(actor, now);
@@ -531,8 +546,8 @@ export class PixiArena {
       y,
       vx: 0,
       vy: 0,
-      width: 28,
-      height: 44,
+      width: 23,
+      height: 39,
       health: WORLD.maxHealth,
       alive: true,
       weapon: this.match.room.settings.startingWeapon,
@@ -593,18 +608,20 @@ export class PixiArena {
   private moveActor(actor: Actor, left: boolean, right: boolean, jump: boolean, delta: number, now: number): void {
     const speed = WORLD.playerSpeed * (actor.speedBoostUntil > now ? 1.45 : 1);
     const jumpPressed = jump && !actor.jumpHeld;
+    const acceleration = actor.blockedDown ? GROUND_ACCELERATION : AIR_ACCELERATION;
+    const deceleration = actor.blockedDown ? GROUND_DECELERATION : AIR_DECELERATION;
 
     if (actor.blockedDown) {
       actor.jumpsUsed = 0;
     }
 
     if (left === right) {
-      actor.vx = this.moveToward(actor.vx, 0, DRAG_X * delta);
+      actor.vx = this.moveToward(actor.vx, 0, deceleration * delta);
     } else if (left) {
-      actor.vx -= speed * 9.4 * delta;
+      actor.vx = this.moveToward(actor.vx, -speed, acceleration * delta);
       actor.facing = -1;
     } else {
-      actor.vx += speed * 9.4 * delta;
+      actor.vx = this.moveToward(actor.vx, speed, acceleration * delta);
       actor.facing = 1;
     }
 
@@ -622,7 +639,7 @@ export class PixiArena {
   private integrateActor(actor: Actor, delta: number): void {
     const previousX = actor.x;
     const previousY = actor.y;
-    actor.vy = Math.min(MAX_VY, actor.vy + WORLD.gravity * delta);
+    actor.vy = Math.min(MAX_VY, actor.vy + ARENA_GRAVITY * delta);
     actor.vx = this.clamp(actor.vx, -MAX_VX, MAX_VX);
 
     actor.x += actor.vx * delta;
@@ -670,6 +687,48 @@ export class PixiArena {
     }
   }
 
+  private resolvePlayerCollisions(): void {
+    const aliveActors = this.actors.filter((actor) => actor.alive);
+    for (let index = 0; index < aliveActors.length; index += 1) {
+      for (let otherIndex = index + 1; otherIndex < aliveActors.length; otherIndex += 1) {
+        const first = aliveActors[index];
+        const second = aliveActors[otherIndex];
+        const dx = second.x - first.x;
+        const dy = second.y - first.y;
+        const overlapX = (first.width + second.width) / 2 - Math.abs(dx);
+        const overlapY = (first.height + second.height) / 2 - Math.abs(dy);
+
+        if (overlapX <= 0 || overlapY <= 0) {
+          continue;
+        }
+
+        if (overlapX <= overlapY || overlapY > 16) {
+          const direction = dx >= 0 ? 1 : -1;
+          const push = overlapX / 2 + 0.2;
+          first.x -= direction * push;
+          second.x += direction * push;
+          const averageVelocity = (first.vx + second.vx) * 0.5;
+          first.vx = averageVelocity - direction * 36;
+          second.vx = averageVelocity + direction * 36;
+        } else {
+          const direction = dy >= 0 ? 1 : -1;
+          const push = overlapY / 2 + 0.2;
+          first.y -= direction * push;
+          second.y += direction * push;
+          if (direction > 0) {
+            first.blockedDown = true;
+            first.vy = Math.min(0, first.vy);
+            second.vy = Math.max(90, second.vy);
+          } else {
+            second.blockedDown = true;
+            second.vy = Math.min(0, second.vy);
+            first.vy = Math.max(90, first.vy);
+          }
+        }
+      }
+    }
+  }
+
   private tryAttack(actor: Actor, weaponId: WeaponId, now: number): void {
     const weapon = WEAPONS[weaponId];
     if (actor.weaponUses !== null && actor.weaponUses <= 0) {
@@ -695,17 +754,32 @@ export class PixiArena {
 
   private performMelee(actor: Actor, weaponId: WeaponId): void {
     const weapon = WEAPONS[weaponId];
-    const originX = actor.x + actor.facing * 32;
+    const hitboxWidth = weaponId === "scratch" ? 42 : weaponId === "feedbag" ? 62 : weapon.range;
+    const hitboxHeight = weaponId === "feedbag" ? 50 : weaponId === "fishbat" ? 42 : 34;
+    const hitbox = {
+      x: actor.x + actor.facing * (actor.width / 2 + hitboxWidth / 2 - 2),
+      y: actor.y - 4,
+      width: hitboxWidth,
+      height: hitboxHeight,
+    };
+    let hit = false;
+
     this.addMeleeHitSpark(actor, weaponId);
+    actor.vx -= actor.facing * (weaponId === "feedbag" ? 140 : weaponId === "fishbat" ? 92 : 54);
 
     for (const target of this.actors) {
       if (target === actor || !target.alive) {
         continue;
       }
       const inFront = actor.facing === 1 ? target.x >= actor.x : target.x <= actor.x;
-      if (inFront && this.distance(originX, actor.y, target.x, target.y) <= weapon.range) {
-        this.damageActor(target, weapon.damage, actor.facing * weapon.knockback, -150);
+      if (inFront && this.overlap(hitbox, this.actorRect(target))) {
+        hit = true;
+        this.damageActor(target, weapon.damage, actor.facing * weapon.knockback, weaponId === "feedbag" ? -190 : -150);
       }
+    }
+
+    if (hit) {
+      this.triggerHitStop(52);
     }
   }
 
@@ -716,6 +790,7 @@ export class PixiArena {
     projectileView.y = actor.y - 4;
     projectileView.scale.set(weapon.kind === "explosive" ? 0.78 : weaponId === "spray" ? 0.48 : 0.62);
     this.world.addChild(projectileView);
+    actor.vx -= actor.facing * (weapon.kind === "explosive" ? 115 : weaponId === "pistol" ? 72 : 44);
 
     this.projectiles.push({
       x: projectileView.x,
@@ -815,6 +890,7 @@ export class PixiArena {
 
   private damageActor(actor: Actor, amount: number, knockbackX: number, knockbackY: number): void {
     actor.health = Math.max(0, actor.health - amount);
+    this.triggerHitStop(amount >= 30 ? 48 : 34);
     actor.catView.tint = 0xffd1d1;
     this.setTimer(() => {
       actor.catView.tint = 0xffffff;
@@ -1092,6 +1168,10 @@ export class PixiArena {
     spark.addChild(g);
     this.world.addChild(spark);
     this.fadeAndDestroy(spark, 120, 1.25);
+  }
+
+  private triggerHitStop(durationMs: number): void {
+    this.hitStopUntil = Math.max(this.hitStopUntil, performance.now() + durationMs);
   }
 
   private fadeAndDestroy(item: Container, duration: number, scaleTarget: number): void {
