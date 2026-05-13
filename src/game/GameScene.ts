@@ -260,7 +260,7 @@ export class GameScene extends Phaser.Scene {
       this.tryAttack(actor, actor.weapon === "scratch" ? "scratch" : actor.weapon, time);
     }
 
-    if (throwWeapon && actor.weapon !== "scratch") {
+    if (throwWeapon && actor.weapon !== "scratch" && WEAPONS[actor.weapon].kind !== "melee") {
       this.tryAttack(actor, actor.weapon, time);
     }
   }
@@ -280,7 +280,8 @@ export class GameScene extends Phaser.Scene {
     this.moveActor(actor, left, right, shouldJump);
 
     const closeEnough = Phaser.Math.Distance.Between(actor.sprite.x, actor.sprite.y, target.sprite.x, target.sprite.y) < 76;
-    const hasLineWeapon = actor.weapon !== "scratch" && Math.abs(distance) < WEAPONS[actor.weapon].range;
+    const weapon = WEAPONS[actor.weapon];
+    const hasLineWeapon = weapon.kind !== "melee" && Math.abs(distance) < weapon.range;
 
     if (closeEnough || hasLineWeapon) {
       this.tryAttack(actor, actor.weapon, time);
@@ -321,20 +322,28 @@ export class GameScene extends Phaser.Scene {
     }
 
     actor.lastAttackAt = time;
-    if (weaponId === "scratch") {
-      this.performScratch(actor);
+    if (weapon.kind === "melee") {
+      this.performMelee(actor, weaponId);
       return;
     }
 
     this.fireProjectile(actor, weaponId);
   }
 
-  private performScratch(actor: Actor): void {
-    const weapon = WEAPONS.scratch;
+  private performMelee(actor: Actor, weaponId: WeaponId): void {
+    const weapon = WEAPONS[weaponId];
     const originX = actor.sprite.x + actor.facing * 32;
-    const slash = this.add.arc(originX, actor.sprite.y, 26, -55, 55, false, 0xf7f7ff, 0.25);
+    const radius = weapon.range * 0.46;
+    const slashColor = weaponId === "fishbat" ? 0x78c6a3 : 0xf7f7ff;
+    const slash = this.add.arc(originX, actor.sprite.y, radius, -55, 55, false, slashColor, 0.28);
     slash.setScale(actor.facing, 1);
-    this.tweens.add({ targets: slash, alpha: 0, scale: 1.8, duration: 150, onComplete: () => slash.destroy() });
+    if (weaponId === "fishbat") {
+      const fish = this.add.image(actor.sprite.x + actor.facing * 34, actor.sprite.y - 8, "weapon-fishbat");
+      fish.setFlipX(actor.facing === -1);
+      fish.setAngle(actor.facing * -24);
+      this.tweens.add({ targets: fish, alpha: 0, angle: actor.facing * 48, duration: 190, onComplete: () => fish.destroy() });
+    }
+    this.tweens.add({ targets: slash, alpha: 0, scale: 1.8, duration: 170, onComplete: () => slash.destroy() });
 
     for (const target of this.actors) {
       if (target === actor || !target.alive) {
@@ -357,11 +366,12 @@ export class GameScene extends Phaser.Scene {
       weapon: weaponId,
       bornAt: this.time.now,
     } satisfies ProjectileData);
-    projectile.setDisplaySize(weaponId === "bomb" ? 28 : 22, weaponId === "bomb" ? 28 : 22);
-    projectile.setVelocity((weapon.projectileSpeed ?? 500) * actor.facing, weaponId === "bomb" ? -120 : 0);
+    const projectileSize = weapon.kind === "explosive" ? 28 : weaponId === "spray" ? 16 : 24;
+    projectile.setDisplaySize(projectileSize, projectileSize);
+    projectile.setVelocity((weapon.projectileSpeed ?? 500) * actor.facing, weapon.kind === "explosive" ? -120 : 0);
     projectile.setAngularVelocity(actor.facing * 360);
 
-    if (weaponId === "bomb") {
+    if (weapon.kind === "explosive") {
       projectile.body.allowGravity = true;
       actor.weapon = "scratch";
     }
@@ -408,8 +418,8 @@ export class GameScene extends Phaser.Scene {
 
   private onProjectileHitWall(projectile: Phaser.Physics.Arcade.Sprite): void {
     const payload = projectile.getData("payload") as ProjectileData | undefined;
-    if (payload?.weapon === "bomb") {
-      this.explode(projectile.x, projectile.y, payload.ownerId);
+    if (payload && WEAPONS[payload.weapon].kind === "explosive") {
+      this.explode(projectile.x, projectile.y, payload.ownerId, payload.weapon);
     }
     projectile.destroy();
   }
@@ -424,8 +434,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (payload.weapon === "bomb") {
-      this.explode(projectile.x, projectile.y, payload.ownerId);
+    if (WEAPONS[payload.weapon].kind === "explosive") {
+      this.explode(projectile.x, projectile.y, payload.ownerId, payload.weapon);
     } else {
       const weapon = WEAPONS[payload.weapon];
       const direction = (projectile.body?.velocity.x ?? 1) >= 0 ? 1 : -1;
@@ -435,8 +445,8 @@ export class GameScene extends Phaser.Scene {
     projectile.destroy();
   }
 
-  private explode(x: number, y: number, ownerId: string): void {
-    const weapon = WEAPONS.bomb;
+  private explode(x: number, y: number, ownerId: string, weaponId: WeaponId): void {
+    const weapon = WEAPONS[weaponId];
     const blast = this.add.circle(x, y, weapon.radius ?? 80, 0xffd166, 0.33);
     this.tweens.add({ targets: blast, alpha: 0, scale: 1.6, duration: 260, onComplete: () => blast.destroy() });
 
@@ -545,10 +555,10 @@ export class GameScene extends Phaser.Scene {
         return true;
       }
       const weapon = WEAPONS[payload.weapon];
-      const maxAge = payload.weapon === "bomb" ? 1550 : (weapon.range / (weapon.projectileSpeed ?? 500)) * 1000;
+      const maxAge = weapon.kind === "explosive" ? 1550 : (weapon.range / (weapon.projectileSpeed ?? 500)) * 1000;
       if (time - payload.bornAt > maxAge) {
-        if (payload.weapon === "bomb") {
-          this.explode(projectile.x, projectile.y, payload.ownerId);
+        if (weapon.kind === "explosive") {
+          this.explode(projectile.x, projectile.y, payload.ownerId, payload.weapon);
         }
         projectile.destroy();
       }

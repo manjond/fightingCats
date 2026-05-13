@@ -12,7 +12,7 @@ export type CatId =
   | "blue"
   | "gold";
 
-export type WeaponId = "scratch" | "pistol" | "yarn" | "bomb";
+export type WeaponId = "scratch" | "pistol" | "yarn" | "bomb" | "fishbat" | "sardine" | "spray" | "bell";
 
 export type HazardId = "spikes" | "laser" | "steam";
 
@@ -59,6 +59,7 @@ export interface CatConfig {
 export interface WeaponConfig {
   id: WeaponId;
   name: string;
+  kind: "melee" | "projectile" | "explosive";
   damage: number;
   cooldownMs: number;
   range: number;

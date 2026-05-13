@@ -50,6 +50,43 @@ function createWeaponTextures(scene: Phaser.Scene): void {
       graphics.fillRoundedRect(20, 20, 9, 17, 3);
       graphics.fillStyle(0xffd166, 1);
       graphics.fillCircle(33, 16, 4);
+    } else if (weapon.id === "fishbat") {
+      graphics.fillStyle(0x78c6a3, 1);
+      graphics.fillEllipse(23, 23, 34, 13);
+      graphics.fillTriangle(7, 23, 0, 14, 0, 32);
+      graphics.fillStyle(0xe8f7ef, 1);
+      graphics.fillEllipse(28, 20, 8, 5);
+      graphics.fillStyle(0x10231d, 1);
+      graphics.fillCircle(36, 21, 2);
+      graphics.lineStyle(3, 0x315f52, 1);
+      graphics.lineBetween(13, 23, 38, 23);
+    } else if (weapon.id === "sardine") {
+      graphics.fillStyle(0xb8d8e8, 1);
+      graphics.fillEllipse(22, 23, 30, 10);
+      graphics.fillTriangle(6, 23, 0, 16, 0, 30);
+      graphics.fillStyle(0x2a6f97, 1);
+      graphics.fillCircle(34, 21, 2);
+      graphics.lineStyle(2, 0xf8fafc, 1);
+      graphics.lineBetween(13, 19, 27, 27);
+    } else if (weapon.id === "spray") {
+      graphics.fillStyle(0xffc857, 1);
+      graphics.fillRoundedRect(13, 14, 18, 26, 5);
+      graphics.fillStyle(0x2f80ed, 1);
+      graphics.fillRect(16, 9, 12, 7);
+      graphics.fillStyle(0x5de0e6, 1);
+      graphics.fillCircle(34, 14, 3);
+      graphics.lineStyle(2, 0x5de0e6, 0.8);
+      graphics.lineBetween(35, 14, 43, 10);
+      graphics.lineBetween(35, 17, 43, 20);
+    } else if (weapon.id === "bell") {
+      graphics.fillStyle(0xf4d35e, 1);
+      graphics.fillCircle(23, 25, 13);
+      graphics.fillStyle(0xd89c00, 1);
+      graphics.fillRect(17, 12, 12, 6);
+      graphics.fillStyle(0x302311, 1);
+      graphics.fillCircle(23, 33, 3);
+      graphics.lineStyle(2, 0xff7f50, 1);
+      graphics.lineBetween(29, 13, 38, 5);
     } else if (weapon.id === "yarn") {
       graphics.lineStyle(4, 0xe76f9d, 1);
       graphics.strokeCircle(22, 22, 14);
