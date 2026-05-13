@@ -1,0 +1,346 @@
+import type { CatConfig, MapConfig, WeaponConfig, WeaponId } from "./types";
+
+export const WORLD = {
+  width: 1280,
+  height: 720,
+  gravity: 1650,
+  playerSpeed: 260,
+  jumpVelocity: -610,
+  maxHealth: 100,
+  maxPlayers: 8,
+};
+
+export const CATS: CatConfig[] = [
+  { id: "orange", name: "Naranja", body: 0xf28c28, accent: 0xffcf75, ear: 0xffb347 },
+  { id: "black", name: "Negro", body: 0x1f2937, accent: 0x94a3b8, ear: 0x475569 },
+  { id: "brown", name: "Marron", body: 0x8b5e34, accent: 0xd0a06b, ear: 0xa66a3f },
+  { id: "persian", name: "Persa", body: 0xe9dcc9, accent: 0xb88968, ear: 0xf4efe6 },
+  { id: "calico", name: "Calico", body: 0xffffff, accent: 0xd95d39, ear: 0x22223b },
+  { id: "gray", name: "Gris", body: 0x7c8798, accent: 0xd7dde8, ear: 0x9aa4b2 },
+  { id: "siamese", name: "Siames", body: 0xd9c6a5, accent: 0x44312b, ear: 0x60433a },
+  { id: "tuxedo", name: "Smoking", body: 0x111827, accent: 0xf8fafc, ear: 0x374151 },
+];
+
+export const WEAPONS: Record<WeaponId, WeaponConfig> = {
+  scratch: {
+    id: "scratch",
+    name: "Aranazo",
+    damage: 16,
+    cooldownMs: 430,
+    range: 58,
+    knockback: 270,
+  },
+  pistol: {
+    id: "pistol",
+    name: "Pistola de agua",
+    damage: 18,
+    cooldownMs: 620,
+    range: 760,
+    projectileSpeed: 760,
+    knockback: 230,
+  },
+  yarn: {
+    id: "yarn",
+    name: "Bola de hilo",
+    damage: 24,
+    cooldownMs: 900,
+    range: 620,
+    projectileSpeed: 520,
+    radius: 18,
+    knockback: 360,
+  },
+  bomb: {
+    id: "bomb",
+    name: "Lata explosiva",
+    damage: 38,
+    cooldownMs: 1250,
+    range: 420,
+    projectileSpeed: 390,
+    radius: 82,
+    knockback: 540,
+  },
+};
+
+export const MAPS: MapConfig[] = [
+  {
+    id: "roof-run",
+    name: "Azoteas de Coopverse",
+    theme: "rooftop",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 225, y: 550, width: 270, height: 26 },
+      { x: 615, y: 475, width: 300, height: 26 },
+      { x: 1040, y: 550, width: 260, height: 26 },
+      { x: 420, y: 325, width: 200, height: 24 },
+      { x: 850, y: 305, width: 220, height: 24 },
+    ],
+    hazards: [],
+    boosters: [
+      { x: 640, y: 674, width: 120, height: 16, kind: "speed" },
+      { x: 1080, y: 528, width: 86, height: 14, kind: "jump" },
+    ],
+    spawns: [
+      { x: 110, y: 620 },
+      { x: 300, y: 500 },
+      { x: 530, y: 420 },
+      { x: 740, y: 420 },
+      { x: 980, y: 500 },
+      { x: 1160, y: 620 },
+      { x: 420, y: 270 },
+      { x: 850, y: 250 },
+    ],
+    weaponSpawns: [
+      { x: 220, y: 505 },
+      { x: 640, y: 430 },
+      { x: 1040, y: 505 },
+      { x: 640, y: 640 },
+    ],
+  },
+  {
+    id: "greenhouse",
+    name: "Invernadero Picante",
+    theme: "greenhouse",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 180, y: 585, width: 220, height: 24 },
+      { x: 1100, y: 585, width: 220, height: 24 },
+      { x: 420, y: 455, width: 260, height: 24 },
+      { x: 860, y: 455, width: 260, height: 24 },
+      { x: 640, y: 310, width: 250, height: 24 },
+    ],
+    hazards: [{ x: 640, y: 677, width: 210, height: 18, kind: "spikes", damage: 15 }],
+    boosters: [
+      { x: 175, y: 562, width: 72, height: 14, kind: "jump" },
+      { x: 1105, y: 562, width: 72, height: 14, kind: "jump" },
+    ],
+    spawns: [
+      { x: 95, y: 628 },
+      { x: 275, y: 535 },
+      { x: 410, y: 405 },
+      { x: 640, y: 260 },
+      { x: 870, y: 405 },
+      { x: 1010, y: 535 },
+      { x: 1185, y: 628 },
+      { x: 640, y: 628 },
+    ],
+    weaponSpawns: [
+      { x: 180, y: 540 },
+      { x: 420, y: 410 },
+      { x: 860, y: 410 },
+      { x: 1100, y: 540 },
+    ],
+  },
+  {
+    id: "subway",
+    name: "Metro Medianoche",
+    theme: "subway",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 320, y: 548, width: 330, height: 28 },
+      { x: 960, y: 548, width: 330, height: 28 },
+      { x: 640, y: 410, width: 280, height: 26 },
+      { x: 220, y: 295, width: 220, height: 24 },
+      { x: 1060, y: 295, width: 220, height: 24 },
+    ],
+    hazards: [{ x: 640, y: 675, width: 160, height: 22, kind: "laser", damage: 22 }],
+    boosters: [{ x: 640, y: 385, width: 90, height: 14, kind: "speed" }],
+    spawns: [
+      { x: 90, y: 628 },
+      { x: 280, y: 500 },
+      { x: 500, y: 500 },
+      { x: 640, y: 360 },
+      { x: 780, y: 500 },
+      { x: 1000, y: 500 },
+      { x: 1190, y: 628 },
+      { x: 1060, y: 245 },
+    ],
+    weaponSpawns: [
+      { x: 320, y: 505 },
+      { x: 640, y: 365 },
+      { x: 960, y: 505 },
+      { x: 220, y: 250 },
+    ],
+  },
+  {
+    id: "arcade",
+    name: "Arcade de Carton",
+    theme: "arcade",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 210, y: 545, width: 260, height: 24 },
+      { x: 1070, y: 545, width: 260, height: 24 },
+      { x: 640, y: 520, width: 250, height: 24 },
+      { x: 420, y: 370, width: 210, height: 24 },
+      { x: 860, y: 370, width: 210, height: 24 },
+      { x: 640, y: 240, width: 180, height: 22 },
+    ],
+    hazards: [],
+    boosters: [
+      { x: 420, y: 348, width: 74, height: 12, kind: "speed" },
+      { x: 860, y: 348, width: 74, height: 12, kind: "speed" },
+    ],
+    spawns: [
+      { x: 100, y: 628 },
+      { x: 210, y: 495 },
+      { x: 420, y: 320 },
+      { x: 640, y: 190 },
+      { x: 860, y: 320 },
+      { x: 1070, y: 495 },
+      { x: 1180, y: 628 },
+      { x: 640, y: 470 },
+    ],
+    weaponSpawns: [
+      { x: 210, y: 500 },
+      { x: 640, y: 475 },
+      { x: 860, y: 325 },
+      { x: 640, y: 195 },
+    ],
+  },
+  {
+    id: "bakery",
+    name: "Panaderia del Caos",
+    theme: "bakery",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 270, y: 575, width: 300, height: 26 },
+      { x: 1010, y: 575, width: 300, height: 26 },
+      { x: 640, y: 445, width: 340, height: 26 },
+      { x: 220, y: 315, width: 200, height: 24 },
+      { x: 1060, y: 315, width: 200, height: 24 },
+    ],
+    hazards: [{ x: 640, y: 425, width: 112, height: 18, kind: "steam", damage: 13 }],
+    boosters: [{ x: 640, y: 674, width: 110, height: 14, kind: "jump" }],
+    spawns: [
+      { x: 90, y: 628 },
+      { x: 265, y: 525 },
+      { x: 465, y: 525 },
+      { x: 640, y: 395 },
+      { x: 815, y: 525 },
+      { x: 1015, y: 525 },
+      { x: 1190, y: 628 },
+      { x: 1060, y: 265 },
+    ],
+    weaponSpawns: [
+      { x: 270, y: 530 },
+      { x: 640, y: 400 },
+      { x: 1010, y: 530 },
+      { x: 220, y: 270 },
+    ],
+  },
+  {
+    id: "dojo",
+    name: "Dojo de Rascadores",
+    theme: "dojo",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 640, y: 560, width: 430, height: 28 },
+      { x: 250, y: 420, width: 230, height: 24 },
+      { x: 1030, y: 420, width: 230, height: 24 },
+      { x: 640, y: 285, width: 290, height: 24 },
+    ],
+    hazards: [],
+    boosters: [
+      { x: 120, y: 674, width: 74, height: 14, kind: "speed" },
+      { x: 1160, y: 674, width: 74, height: 14, kind: "speed" },
+    ],
+    spawns: [
+      { x: 90, y: 628 },
+      { x: 320, y: 628 },
+      { x: 505, y: 510 },
+      { x: 640, y: 235 },
+      { x: 775, y: 510 },
+      { x: 960, y: 628 },
+      { x: 1190, y: 628 },
+      { x: 1030, y: 370 },
+    ],
+    weaponSpawns: [
+      { x: 250, y: 375 },
+      { x: 640, y: 515 },
+      { x: 1030, y: 375 },
+      { x: 640, y: 240 },
+    ],
+  },
+  {
+    id: "lab",
+    name: "Laboratorio del Laser",
+    theme: "lab",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 220, y: 560, width: 240, height: 24 },
+      { x: 1060, y: 560, width: 240, height: 24 },
+      { x: 640, y: 500, width: 250, height: 24 },
+      { x: 410, y: 345, width: 240, height: 24 },
+      { x: 870, y: 345, width: 240, height: 24 },
+    ],
+    hazards: [
+      { x: 640, y: 675, width: 130, height: 20, kind: "laser", damage: 20 },
+      { x: 640, y: 327, width: 105, height: 18, kind: "spikes", damage: 16 },
+    ],
+    boosters: [
+      { x: 220, y: 538, width: 76, height: 12, kind: "jump" },
+      { x: 1060, y: 538, width: 76, height: 12, kind: "jump" },
+    ],
+    spawns: [
+      { x: 100, y: 628 },
+      { x: 220, y: 510 },
+      { x: 410, y: 295 },
+      { x: 640, y: 450 },
+      { x: 870, y: 295 },
+      { x: 1060, y: 510 },
+      { x: 1180, y: 628 },
+      { x: 640, y: 628 },
+    ],
+    weaponSpawns: [
+      { x: 220, y: 515 },
+      { x: 410, y: 300 },
+      { x: 870, y: 300 },
+      { x: 1060, y: 515 },
+    ],
+  },
+  {
+    id: "harbor",
+    name: "Puerto de Atunes",
+    theme: "harbor",
+    platforms: [
+      { x: 640, y: 696, width: 1280, height: 48 },
+      { x: 270, y: 530, width: 290, height: 24 },
+      { x: 1010, y: 530, width: 290, height: 24 },
+      { x: 640, y: 420, width: 300, height: 24 },
+      { x: 180, y: 300, width: 210, height: 24 },
+      { x: 1100, y: 300, width: 210, height: 24 },
+    ],
+    hazards: [{ x: 640, y: 676, width: 200, height: 20, kind: "steam", damage: 12 }],
+    boosters: [
+      { x: 470, y: 674, width: 82, height: 14, kind: "speed" },
+      { x: 810, y: 674, width: 82, height: 14, kind: "speed" },
+    ],
+    spawns: [
+      { x: 95, y: 628 },
+      { x: 270, y: 480 },
+      { x: 470, y: 480 },
+      { x: 640, y: 370 },
+      { x: 810, y: 480 },
+      { x: 1010, y: 480 },
+      { x: 1185, y: 628 },
+      { x: 1100, y: 250 },
+    ],
+    weaponSpawns: [
+      { x: 270, y: 485 },
+      { x: 640, y: 375 },
+      { x: 1010, y: 485 },
+      { x: 1100, y: 255 },
+    ],
+  },
+];
+
+export const STANDARD_MAP_IDS = ["roof-run", "greenhouse", "subway", "dojo", "harbor"];
+
+export const STARTING_WEAPONS = Object.keys(WEAPONS) as WeaponId[];
+
+export function getMapById(id: string): MapConfig {
+  return MAPS.find((map) => map.id === id) ?? MAPS[0];
+}
+
+export function getCatById(id: string): CatConfig {
+  return CATS.find((cat) => cat.id === id) ?? CATS[0];
+}
