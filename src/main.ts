@@ -494,23 +494,61 @@ function renderCatPreview(occupiedCats: Map<CatId, string>): string {
     <div class="cat-preview-card">
       <button class="cat-nav" type="button" data-cat-step="-1" aria-label="Previous cat">&lt;</button>
       <div class="cat-preview">
-        <div class="css-cat upright ${cat.id === "striped" ? "striped" : ""}" style="--cat-body:${body};--cat-accent:${accent};--cat-ear:${ear};">
-          <span class="tail"></span>
-          <span class="body"></span>
-          <span class="head"></span>
-          <span class="ear left"></span>
-          <span class="ear right"></span>
-          <span class="eye left"></span>
-          <span class="eye right"></span>
-          <span class="muzzle"></span>
-          <span class="leg left"></span>
-          <span class="leg right"></span>
-        </div>
+        ${renderPixelCat(body, accent, ear, cat.id === "striped")}
         <strong>${catName(cat.id)}</strong>
         <span>${t("selectedCat")} · ${CATS.length - takenCount}/${CATS.length} ${t("free")}</span>
       </div>
       <button class="cat-nav" type="button" data-cat-step="1" aria-label="Next cat">&gt;</button>
     </div>
+  `;
+}
+
+function renderPixelCat(body: string, accent: string, ear: string, striped: boolean): string {
+  const stripes = striped
+    ? `
+      <rect x="22" y="12" width="4" height="15" fill="${accent}" />
+      <rect x="31" y="10" width="4" height="16" fill="${accent}" />
+      <rect x="40" y="13" width="4" height="13" fill="${accent}" />
+      <rect x="22" y="42" width="5" height="16" fill="${accent}" />
+      <rect x="43" y="42" width="5" height="15" fill="${accent}" />
+    `
+    : "";
+
+  return `
+    <svg class="pixel-cat" viewBox="0 0 96 96" role="img" aria-hidden="true" shape-rendering="crispEdges">
+      <rect x="17" y="50" width="12" height="24" fill="#0b1020" />
+      <rect x="12" y="46" width="13" height="12" fill="#0b1020" />
+      <rect x="24" y="36" width="38" height="39" fill="#0b1020" />
+      <rect x="22" y="70" width="18" height="11" fill="#0b1020" />
+      <rect x="48" y="70" width="23" height="11" fill="#0b1020" />
+      <rect x="20" y="12" width="45" height="32" fill="#0b1020" />
+      <rect x="57" y="25" width="22" height="17" fill="#0b1020" />
+      <polygon points="22,14 32,0 40,14" fill="#0b1020" />
+      <polygon points="48,14 62,2 67,17" fill="#0b1020" />
+      <rect x="62" y="47" width="18" height="13" fill="#0b1020" />
+      <rect x="19" y="52" width="8" height="20" fill="${body}" />
+      <rect x="14" y="49" width="10" height="8" fill="${body}" />
+      <rect x="27" y="39" width="31" height="33" fill="${body}" />
+      <rect x="25" y="70" width="15" height="7" fill="${body}" />
+      <rect x="50" y="70" width="18" height="7" fill="${body}" />
+      <rect x="23" y="15" width="39" height="25" fill="${body}" />
+      <rect x="58" y="28" width="18" height="11" fill="${accent}" />
+      <polygon points="25,14 32,4 37,14" fill="${ear}" />
+      <polygon points="51,14 60,5 63,17" fill="${ear}" />
+      <rect x="64" y="49" width="13" height="8" fill="${body}" />
+      <rect x="36" y="44" width="13" height="24" fill="${accent}" />
+      <rect x="27" y="63" width="31" height="9" fill="rgba(0,0,0,.24)" />
+      ${stripes}
+      <rect x="31" y="24" width="8" height="9" fill="#f8fafc" />
+      <rect x="47" y="24" width="8" height="9" fill="#f8fafc" />
+      <rect x="35" y="26" width="3" height="5" fill="#050816" />
+      <rect x="51" y="26" width="3" height="5" fill="#050816" />
+      <rect x="66" y="32" width="5" height="3" fill="#050816" />
+      <rect x="59" y="39" width="4" height="3" fill="#050816" />
+      <rect x="69" y="39" width="4" height="3" fill="#050816" />
+      <rect x="24" y="76" width="17" height="4" fill="rgba(0,0,0,.28)" />
+      <rect x="51" y="76" width="18" height="4" fill="rgba(0,0,0,.28)" />
+    </svg>
   `;
 }
 

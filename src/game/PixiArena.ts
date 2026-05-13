@@ -812,7 +812,7 @@ export class PixiArena {
 
     actor.view.x = actor.x;
     actor.view.y = actor.y;
-    actor.catView.scale.x = actor.facing;
+    actor.catView.scale.set(actor.facing * 1.16, 1.16);
     actor.weaponView.x = xOffset;
     actor.weaponView.y = yOffset;
     actor.weaponView.rotation = angle;
