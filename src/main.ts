@@ -41,7 +41,7 @@ function renderHome(): void {
     <main class="shell">
       <section class="lobby home-card">
         <div class="brand home-brand">
-          <span class="mark">FC</span>
+          <img class="home-thumb" src="/images/fighting-cats-icon-192.png" alt="" />
           <div>
             <h1>Fighting Cats</h1>
           </div>
@@ -49,7 +49,7 @@ function renderHome(): void {
 
         <div class="home-copy">
           <h2>Entra, crea sala y pelea en arenas de plataformas.</h2>
-          <p>La eleccion de gato se hace dentro de la sala para que cada jugador pueda ver que luchadores siguen libres.</p>
+          <p>Un combate rapido y caotico entre gatos con mucho caracter: salta entre tejados, recoge armas absurdas, esquiva trampas y demuestra quien manda en la arena.</p>
         </div>
 
         <div class="player-panel compact">

@@ -111,15 +111,14 @@ select:disabled {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.mark {
-  display: grid;
-  width: 58px;
-  height: 58px;
-  place-items: center;
+.home-thumb {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  background: #ffd166;
-  color: #111827;
-  font-weight: 900;
+  object-fit: cover;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 }
 
 h1,
