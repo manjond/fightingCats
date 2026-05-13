@@ -107,8 +107,8 @@ export class PixiArena {
 
   async start(): Promise<void> {
     await this.app.init({
-      width: WORLD.width,
-      height: WORLD.height,
+      width: this.parent.clientWidth || window.innerWidth,
+      height: this.parent.clientHeight || window.innerHeight,
       background: 0x050816,
       antialias: false,
       autoDensity: false,
@@ -124,6 +124,8 @@ export class PixiArena {
     this.app.canvas.className = "pixi-game-canvas";
     this.parent.append(this.app.canvas);
     this.app.stage.addChild(this.world);
+    window.addEventListener("resize", this.resize);
+    this.resize();
     this.bindKeyboard();
     this.startRound();
     this.app.ticker.add(this.tick);
@@ -135,11 +137,21 @@ export class PixiArena {
     this.timers = [];
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("resize", this.resize);
     this.app.ticker.remove(this.tick);
     if (this.initialized) {
       this.app.destroy(true);
     }
   }
+
+  private resize = (): void => {
+    const width = this.parent.clientWidth || window.innerWidth;
+    const height = this.parent.clientHeight || window.innerHeight;
+    this.app.renderer.resize(width, height);
+    const scale = Math.min(width / WORLD.width, height / WORLD.height);
+    this.world.scale.set(scale);
+    this.world.position.set(Math.round((width - WORLD.width * scale) / 2), Math.round((height - WORLD.height * scale) / 2));
+  };
 
   private bindKeyboard(): void {
     window.addEventListener("keydown", this.onKeyDown);
@@ -903,35 +915,51 @@ export class PixiArena {
     const cat = CATS.find((candidate) => candidate.id === catId) ?? CATS[0];
     const view = new Container();
     const g = new Graphics();
-    g.rect(-12, -20, 24, 24).fill(OUTLINE);
-    g.rect(-9, 1, 18, 25).fill(OUTLINE);
-    g.rect(-18, -2, 10, 10).fill(OUTLINE);
-    g.rect(8, -2, 10, 10).fill(OUTLINE);
-    g.rect(-13, 23, 10, 6).fill(OUTLINE);
-    g.rect(4, 23, 10, 6).fill(OUTLINE);
-    g.rect(10, 8, 16, 7).fill(OUTLINE);
+    const shadow = this.darken(cat.body, 0.28);
 
-    g.rect(-11, -24, 8, 9).fill(cat.ear);
-    g.rect(3, -24, 8, 9).fill(cat.ear);
-    g.rect(-10, -17, 20, 18).fill(cat.body);
-    g.rect(-7, 2, 14, 21).fill(cat.body);
-    g.rect(-17, 0, 7, 7).fill(cat.body);
-    g.rect(10, 0, 7, 7).fill(cat.body);
-    g.rect(-12, 22, 8, 5).fill(cat.body);
-    g.rect(4, 22, 8, 5).fill(cat.body);
-    g.rect(12, 9, 12, 4).fill(cat.body);
-    g.rect(-5, -2, 10, 6).fill(cat.accent);
-    g.rect(-4, 8, 8, 12).fill(cat.accent);
+    g.rect(-21, 5, 8, 16).fill(OUTLINE);
+    g.rect(-25, 0, 9, 9).fill(OUTLINE);
+    g.rect(-17, -2, 27, 31).fill(OUTLINE);
+    g.rect(-17, 23, 13, 8).fill(OUTLINE);
+    g.rect(0, 23, 17, 8).fill(OUTLINE);
+    g.rect(-16, -27, 31, 25).fill(OUTLINE);
+    g.rect(9, -18, 14, 13).fill(OUTLINE);
+    g.poly([-14, -25, -8, -38, -2, -25]).fill(OUTLINE);
+    g.poly([4, -25, 12, -37, 16, -23]).fill(OUTLINE);
+    g.rect(-24, -2, 10, 11).fill(OUTLINE);
+    g.rect(8, 0, 15, 11).fill(OUTLINE);
+
+    g.rect(-19, 6, 5, 13).fill(cat.body);
+    g.rect(-23, 2, 7, 6).fill(cat.body);
+    g.rect(-14, 0, 21, 26).fill(cat.body);
+    g.rect(-14, 23, 11, 5).fill(cat.body);
+    g.rect(2, 23, 13, 5).fill(cat.body);
+    g.rect(-13, -24, 26, 20).fill(cat.body);
+    g.rect(9, -16, 11, 9).fill(cat.accent);
+    g.poly([-12, -25, -8, -35, -4, -25]).fill(cat.ear);
+    g.poly([6, -25, 11, -34, 14, -23]).fill(cat.ear);
+    g.rect(-21, 0, 7, 7).fill(cat.body);
+    g.rect(10, 2, 11, 7).fill(cat.body);
+    g.rect(-6, 5, 9, 16).fill(cat.accent);
+    g.rect(-14, 18, 21, 7).fill(shadow);
+
     if (cat.id === "striped") {
-      g.rect(-8, -15, 3, 11).fill(cat.accent);
-      g.rect(-1, -17, 3, 10).fill(cat.accent);
-      g.rect(6, -15, 3, 11).fill(cat.accent);
+      g.rect(-9, -22, 3, 14).fill(cat.accent);
+      g.rect(-2, -24, 3, 13).fill(cat.accent);
+      g.rect(6, -22, 3, 14).fill(cat.accent);
+      g.rect(-13, 3, 4, 14).fill(cat.accent);
+      g.rect(4, 2, 4, 14).fill(cat.accent);
     }
-    g.rect(-6, -10, 5, 5).fill(0xf8fafc);
-    g.rect(4, -10, 5, 5).fill(0xf8fafc);
-    g.rect(-4, -9, 2, 3).fill(0x050816);
-    g.rect(6, -9, 2, 3).fill(0x050816);
-    g.rect(-1, -3, 3, 2).fill(0x050816);
+
+    g.rect(-7, -17, 6, 7).fill(0xf8fafc);
+    g.rect(5, -17, 6, 7).fill(0xf8fafc);
+    g.rect(-4, -15, 2, 4).fill(0x050816);
+    g.rect(8, -15, 2, 4).fill(0x050816);
+    g.rect(14, -12, 4, 3).fill(0x050816);
+    g.rect(10, -7, 3, 2).fill(0x050816);
+    g.rect(16, -7, 3, 2).fill(0x050816);
+    g.rect(-13, 25, 11, 3).fill(shadow);
+    g.rect(3, 25, 13, 3).fill(shadow);
     view.addChild(g);
     return view;
   }
@@ -1056,5 +1084,12 @@ export class PixiArena {
 
   private easeOutCubic(value: number): number {
     return 1 - Math.pow(1 - value, 3);
+  }
+
+  private darken(color: number, amount: number): number {
+    const red = Math.max(0, Math.round(((color >> 16) & 255) * (1 - amount)));
+    const green = Math.max(0, Math.round(((color >> 8) & 255) * (1 - amount)));
+    const blue = Math.max(0, Math.round((color & 255) * (1 - amount)));
+    return (red << 16) + (green << 8) + blue;
   }
 }
