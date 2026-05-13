@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { getMapById, MAPS, WEAPONS, WORLD } from "./config";
 import { createGeneratedTextures } from "./sprites";
-import type { MapConfig, MatchConfig, MatchResult, PlayerSetup, RuntimeControls, WeaponId } from "./types";
+import type { HazardConfig, MapConfig, MatchConfig, MatchResult, PlayerSetup, RuntimeControls, WeaponId } from "./types";
 import { getMapName, getStoredLanguage, getText, getWeaponName } from "../i18n";
 
 interface Actor {
@@ -126,20 +126,23 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = this.physics.add.group({ allowGravity: false });
 
     for (const platform of map.platforms) {
-      const tile = this.platforms.create(platform.x, platform.y, "platform");
+      const tile = this.platforms.create(platform.x, platform.y, `platform-${map.theme}`);
       tile.setDisplaySize(platform.width, platform.height).refreshBody();
+      tile.setDepth(2);
     }
 
     for (const hazard of map.hazards) {
-      const tile = this.hazards.create(hazard.x, hazard.y, "hazard");
+      const tile = this.hazards.create(hazard.x, hazard.y, this.getHazardTexture(hazard));
       tile.setDisplaySize(hazard.width, hazard.height).refreshBody();
       tile.setData("damage", hazard.damage);
+      tile.setDepth(3);
     }
 
     for (const booster of map.boosters) {
       const tile = this.boosters.create(booster.x, booster.y, `booster-${booster.kind}`);
       tile.setDisplaySize(booster.width, booster.height).refreshBody();
       tile.setData("kind", booster.kind);
+      tile.setDepth(4);
     }
 
     this.spawnWeapons(map);
@@ -662,6 +665,19 @@ export class GameScene extends Phaser.Scene {
     return weapon === "scratch" ? `paw-${catId}` : `weapon-${weapon}`;
   }
 
+  private getHazardTexture(hazard: HazardConfig): string {
+    const orientation = this.getHazardOrientation(hazard);
+    return `hazard-${hazard.kind}-${orientation}`;
+  }
+
+  private getHazardOrientation(hazard: HazardConfig): "up" | "down" | "left" | "right" {
+    if (hazard.height > hazard.width) {
+      return hazard.x < WORLD.width / 2 ? "right" : "left";
+    }
+
+    return hazard.y < 80 ? "down" : "up";
+  }
+
   private updateHud(): void {
     const language = getStoredLanguage();
     const mapName = getMapName(language, getMapById(this.mapOrder[this.roundIndex]).id);
@@ -713,12 +729,56 @@ export class GameScene extends Phaser.Scene {
   }
 
   private addBackdrop(map: MapConfig): void {
-    const accent = map.theme === "greenhouse" ? 0x40f99b : map.theme === "arcade" ? 0xff5f7e : 0x5de0e6;
-    for (let index = 0; index < 12; index += 1) {
-      const x = index * 124 + 40;
-      const height = 70 + ((index * 47) % 160);
-      this.add.rectangle(x, WORLD.height - 48 - height / 2, 72, height, 0x0b1020, 0.22);
-      this.add.rectangle(x + 12, WORLD.height - 68 - height, 34, 5, accent, 0.25);
+    const palette = this.getBackdropPalette(map.theme);
+    this.add.rectangle(WORLD.width / 2, WORLD.height / 2, WORLD.width, WORLD.height, palette.base, 1).setDepth(-10);
+
+    for (let y = 58; y < WORLD.height; y += 96) {
+      this.add.rectangle(WORLD.width / 2, y, WORLD.width, 2, palette.grid, 0.18).setDepth(-9);
     }
+
+    for (let index = 0; index < 12; index += 1) {
+      const x = index * 118 + 36;
+      const height = 72 + ((index * 43) % 168);
+      this.add.rectangle(x, WORLD.height - 46 - height / 2, 62, height, palette.shadow, 0.52).setDepth(-8);
+      this.add.rectangle(x + 6, WORLD.height - 56 - height, 32, 7, palette.accent, 0.62).setDepth(-7);
+      this.add.rectangle(x - 18, WORLD.height - 70 - height / 2, 5, height - 20, palette.grid, 0.28).setDepth(-7);
+    }
+
+    if (map.theme === "greenhouse") {
+      for (let x = 70; x < WORLD.width; x += 170) {
+        this.add.rectangle(x, 118, 32, 96, 0x1a6b54, 0.34).setDepth(-7);
+        this.add.rectangle(x + 18, 150, 42, 10, 0x8ef0b4, 0.35).setDepth(-7);
+      }
+    } else if (map.theme === "arcade") {
+      for (let x = 95; x < WORLD.width; x += 155) {
+        this.add.rectangle(x, 108, 48, 38, 0xff5f7e, 0.24).setDepth(-7);
+        this.add.rectangle(x + 8, 112, 26, 8, 0x5de0e6, 0.42).setDepth(-7);
+      }
+    } else if (map.theme === "lab") {
+      for (let x = 110; x < WORLD.width; x += 180) {
+        this.add.rectangle(x, 104, 66, 10, 0x5de0e6, 0.34).setDepth(-7);
+        this.add.rectangle(x + 24, 128, 12, 58, 0xff4d6d, 0.25).setDepth(-7);
+      }
+    } else if (map.theme === "harbor") {
+      for (let x = 80; x < WORLD.width; x += 190) {
+        this.add.rectangle(x, WORLD.height - 118, 72, 18, 0x78c6a3, 0.28).setDepth(-7);
+        this.add.rectangle(x + 18, WORLD.height - 144, 12, 54, 0xf4d35e, 0.22).setDepth(-7);
+      }
+    }
+  }
+
+  private getBackdropPalette(theme: MapConfig["theme"]): { base: number; shadow: number; grid: number; accent: number } {
+    const palettes: Record<MapConfig["theme"], { base: number; shadow: number; grid: number; accent: number }> = {
+      rooftop: { base: 0x101827, shadow: 0x07101f, grid: 0x5de0e6, accent: 0xffd166 },
+      greenhouse: { base: 0x0e241f, shadow: 0x07150f, grid: 0x40f99b, accent: 0xff7f50 },
+      subway: { base: 0x151821, shadow: 0x090b11, grid: 0xf6c453, accent: 0x5de0e6 },
+      arcade: { base: 0x191126, shadow: 0x080612, grid: 0xff5f7e, accent: 0x5de0e6 },
+      bakery: { base: 0x241522, shadow: 0x100812, grid: 0xffc857, accent: 0xff8fab },
+      dojo: { base: 0x211827, shadow: 0x0f0a14, grid: 0xf8b195, accent: 0xffd166 },
+      lab: { base: 0x0e222a, shadow: 0x061118, grid: 0x5de0e6, accent: 0xff4d6d },
+      harbor: { base: 0x102a32, shadow: 0x06161c, grid: 0x78c6a3, accent: 0xf4d35e },
+    };
+
+    return palettes[theme];
   }
 }

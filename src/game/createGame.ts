@@ -15,6 +15,9 @@ export function mountGame(parent: HTMLElement, match: MatchConfig, controls: Run
     width: WORLD.width,
     height: WORLD.height,
     backgroundColor: "#111827",
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true,
     physics: {
       default: "arcade",
       arcade: {

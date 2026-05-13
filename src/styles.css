@@ -551,6 +551,7 @@ kbd {
   position: relative;
   width: 132px;
   height: 112px;
+  image-rendering: pixelated;
 }
 
 .css-cat span {
@@ -561,27 +562,31 @@ kbd {
 .css-cat .body {
   left: 42px;
   bottom: 20px;
-  width: 46px;
-  height: 56px;
-  border-radius: 46% 46% 38% 38%;
+  width: 44px;
+  height: 50px;
+  border: 5px solid #111827;
+  border-radius: 0;
   background: var(--cat-body);
-  box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 -10px 0 rgba(0, 0, 0, 0.12);
 }
 
 .css-cat .head {
   left: 39px;
-  bottom: 70px;
+  bottom: 68px;
   width: 52px;
-  height: 48px;
-  border-radius: 45% 45% 48% 48%;
+  height: 42px;
+  border: 5px solid #111827;
+  border-radius: 0;
   background: var(--cat-body);
-  box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.12);
 }
 
 .css-cat .ear {
   bottom: 105px;
   width: 20px;
   height: 24px;
+  border: 4px solid #111827;
+  border-bottom: 0;
   background: var(--cat-ear);
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
@@ -598,9 +603,9 @@ kbd {
 
 .css-cat .eye {
   bottom: 91px;
-  width: 9px;
-  height: 12px;
-  border-radius: 50%;
+  width: 8px;
+  height: 10px;
+  border-radius: 0;
   background: #111827;
   box-shadow: inset 2px 2px 0 #ffffff;
 }
@@ -616,29 +621,29 @@ kbd {
 .css-cat .muzzle {
   left: 58px;
   bottom: 79px;
-  width: 23px;
-  height: 14px;
-  border-radius: 50%;
+  width: 22px;
+  height: 12px;
+  border-radius: 0;
   background: var(--cat-accent);
 }
 
 .css-cat .tail {
-  right: 11px;
-  bottom: 54px;
-  width: 42px;
-  height: 42px;
-  border: 8px solid var(--cat-body);
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-  border-radius: 50%;
-  transform: rotate(33deg);
+  right: 9px;
+  bottom: 56px;
+  width: 34px;
+  height: 10px;
+  border: 4px solid #111827;
+  border-radius: 0;
+  background: var(--cat-body);
+  transform: rotate(10deg);
 }
 
 .css-cat .leg {
   bottom: 5px;
-  width: 14px;
+  width: 16px;
   height: 22px;
-  border-radius: 999px;
+  border: 4px solid #111827;
+  border-radius: 0;
   background: var(--cat-body);
 }
 
@@ -655,9 +660,10 @@ kbd {
   position: absolute;
   z-index: 2;
   bottom: 42px;
-  width: 18px;
-  height: 12px;
-  border-radius: 999px;
+  width: 20px;
+  height: 14px;
+  border: 4px solid #111827;
+  border-radius: 0;
   background: var(--cat-body);
   content: "";
 }
@@ -726,6 +732,8 @@ kbd {
 
 .game-root canvas {
   display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .game-topbar {
