@@ -20,6 +20,12 @@ function createCatTextures(scene: Phaser.Scene): void {
     graphics.fillCircle(47, 37, 7);
     graphics.fillStyle(cat.accent, 1);
     graphics.fillRoundedRect(18, 28, 19, 16, 7);
+    if (cat.id === "striped") {
+      graphics.lineStyle(3, cat.accent, 1);
+      graphics.lineBetween(17, 17, 15, 29);
+      graphics.lineBetween(29, 15, 29, 27);
+      graphics.lineBetween(41, 17, 43, 29);
+    }
     graphics.fillCircle(23, 25, 3);
     graphics.fillCircle(36, 25, 3);
     graphics.fillStyle(0x111111, 1);

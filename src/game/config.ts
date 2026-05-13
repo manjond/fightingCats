@@ -19,6 +19,10 @@ export const CATS: CatConfig[] = [
   { id: "gray", name: "Gris", body: 0x7c8798, accent: 0xd7dde8, ear: 0x9aa4b2 },
   { id: "siamese", name: "Siames", body: 0xd9c6a5, accent: 0x44312b, ear: 0x60433a },
   { id: "tuxedo", name: "Smoking", body: 0x111827, accent: 0xf8fafc, ear: 0x374151 },
+  { id: "striped", name: "Rayado", body: 0xb7793f, accent: 0x3d2c20, ear: 0xd69a57 },
+  { id: "white", name: "Blanco", body: 0xf7f3ea, accent: 0x95d5ff, ear: 0xffc6d9 },
+  { id: "blue", name: "Azul", body: 0x496ddb, accent: 0x9ad7ff, ear: 0x6f8cff },
+  { id: "gold", name: "Dorado", body: 0xe9b949, accent: 0x6b4e16, ear: 0xffd166 },
 ];
 
 export const WEAPONS: Record<WeaponId, WeaponConfig> = {

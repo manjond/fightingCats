@@ -11,7 +11,7 @@ import {
   quickPlay,
   roomWithUpdatedHost,
 } from "./game/rooms";
-import type { MatchResult, PlayerSetup, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
+import type { CatId, MatchResult, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -39,8 +39,8 @@ function renderHome(): void {
   destroyGame();
   appRoot.innerHTML = `
     <main class="shell">
-      <section class="lobby">
-        <div class="brand">
+      <section class="lobby home-card">
+        <div class="brand home-brand">
           <span class="mark">FC</span>
           <div>
             <h1>Fighting Cats</h1>
@@ -48,35 +48,31 @@ function renderHome(): void {
           </div>
         </div>
 
-        <div class="player-panel">
+        <div class="home-copy">
+          <h2>Entra, crea sala y pelea en arenas de plataformas.</h2>
+          <p>La eleccion de gato se hace dentro de la sala para que cada jugador pueda ver que luchadores siguen libres.</p>
+        </div>
+
+        <div class="player-panel compact">
           <label>
-            Nombre
+            Tu nombre
             <input id="player-name" maxlength="16" value="${escapeHtml(localPlayer.name)}" />
           </label>
-          <div class="cat-grid" aria-label="Selector de gato">
-            ${CATS.map(
-              (cat) => `
-                <button class="cat-chip ${localPlayer.cat === cat.id ? "selected" : ""}" data-cat="${cat.id}">
-                  <span class="cat-dot" style="background:#${cat.body.toString(16).padStart(6, "0")}"></span>
-                  ${cat.name}
-                </button>
-              `,
-            ).join("")}
-          </div>
         </div>
 
-        <div class="actions">
+        <div class="actions home-actions">
           <button class="primary" id="quick-play">Quick play</button>
           <button id="create-room">Crear sala</button>
-          <form id="join-form" class="join-form">
-            <input id="room-code" maxlength="5" placeholder="Codigo" />
-            <button type="submit">Entrar</button>
-          </form>
+          <button id="show-join">Unirse a sala</button>
         </div>
 
-        <div class="note">
-          El multijugador real queda preparado por adaptador. En esta primera version las salas viven en navegador y se rellenan con bots para poder probar combate, mapas y puntuacion ya.
-        </div>
+        <form id="join-form" class="join-form hidden">
+          <label>
+            Codigo de sala
+            <input id="room-code" maxlength="5" placeholder="AB12C" autocomplete="off" />
+          </label>
+          <button class="primary" type="submit">Entrar</button>
+        </form>
       </section>
     </main>
   `;
@@ -85,9 +81,14 @@ function renderHome(): void {
   document.querySelector("#quick-play")?.addEventListener("click", () => {
     syncLocalPlayer();
     activeRoom = quickPlay(localPlayer);
+    syncLocalPlayerFromRoom(activeRoom);
     renderRoom(activeRoom);
   });
   document.querySelector("#create-room")?.addEventListener("click", () => renderCreateRoom());
+  document.querySelector("#show-join")?.addEventListener("click", () => {
+    document.querySelector("#join-form")?.classList.toggle("hidden");
+    document.querySelector<HTMLInputElement>("#room-code")?.focus();
+  });
   document.querySelector("#join-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     syncLocalPlayer();
@@ -98,6 +99,7 @@ function renderHome(): void {
       return;
     }
     activeRoom = room;
+    syncLocalPlayerFromRoom(activeRoom);
     renderRoom(activeRoom);
   });
 }
@@ -178,11 +180,15 @@ function renderCreateRoom(): void {
     });
 
     activeRoom = createRoom(localPlayer, nextSettings);
+    syncLocalPlayerFromRoom(activeRoom);
     renderRoom(activeRoom);
   });
 }
 
 function renderRoom(room: RoomSnapshot): void {
+  syncLocalPlayerFromRoom(room);
+  const occupiedCats = new Map(room.players.filter((player) => player.id !== localPlayer.id).map((player) => [player.cat, player.name]));
+
   appRoot.innerHTML = `
     <main class="shell">
       <section class="lobby wide">
@@ -197,6 +203,10 @@ function renderRoom(room: RoomSnapshot): void {
 
         <div class="room-layout">
           <div class="roster">
+            <div class="section-title">
+              <p class="eyebrow">Jugadores</p>
+              <h2>${room.players.length}/${room.settings.maxPlayers}</h2>
+            </div>
             ${room.players
               .map(
                 (player) => `
@@ -211,11 +221,33 @@ function renderRoom(room: RoomSnapshot): void {
             <div class="player-card muted">${room.settings.maxPlayers - room.players.length} slots libres</div>
           </div>
 
-          <div class="room-summary">
-            <p><strong>Modo</strong> ${room.settings.mode}</p>
-            <p><strong>Rondas</strong> ${room.settings.rounds}</p>
-            <p><strong>Arma inicial</strong> ${WEAPONS[room.settings.startingWeapon].name}</p>
-            <p><strong>Mapas</strong> ${room.settings.mapIds.map((id) => MAPS.find((map) => map.id === id)?.name).join(", ")}</p>
+          <div class="room-side">
+            <div class="cat-selection">
+              <div class="section-title">
+                <p class="eyebrow">Tu gato</p>
+                <h2>Elige luchador</h2>
+              </div>
+              <div class="cat-grid room-cat-grid" aria-label="Selector de gato en sala">
+                ${CATS.map((cat) => {
+                  const owner = occupiedCats.get(cat.id);
+                  const selected = localPlayer.cat === cat.id;
+                  return `
+                    <button class="cat-chip ${selected ? "selected" : ""} ${owner ? "taken" : ""}" data-room-cat="${cat.id}" ${owner ? "disabled" : ""}>
+                      <span class="cat-dot" style="background:#${cat.body.toString(16).padStart(6, "0")}"></span>
+                      <span>${cat.name}</span>
+                      <small>${owner ? `Ocupado por ${escapeHtml(owner)}` : selected ? "Tu gato" : "Libre"}</small>
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+
+            <div class="room-summary">
+              <p><strong>Modo</strong> ${room.settings.mode}</p>
+              <p><strong>Rondas</strong> ${room.settings.rounds}</p>
+              <p><strong>Arma inicial</strong> ${WEAPONS[room.settings.startingWeapon].name}</p>
+              <p><strong>Mapas</strong> ${room.settings.mapIds.map((id) => MAPS.find((map) => map.id === id)?.name).join(", ")}</p>
+            </div>
           </div>
         </div>
       </section>
@@ -223,6 +255,13 @@ function renderRoom(room: RoomSnapshot): void {
   `;
 
   document.querySelector("#back-home")?.addEventListener("click", renderHome);
+  document.querySelectorAll<HTMLButtonElement>("[data-room-cat]").forEach((button) => {
+    button.addEventListener("click", () => {
+      localPlayer = { ...localPlayer, cat: button.dataset.roomCat as CatId };
+      activeRoom = roomWithUpdatedHost(room, localPlayer);
+      renderRoom(activeRoom);
+    });
+  });
   document.querySelector("#start-match")?.addEventListener("click", () => {
     const readyRoom = fillWithBots(roomWithUpdatedHost(room, localPlayer));
     activeRoom = readyRoom;
@@ -241,13 +280,13 @@ function renderGame(room: RoomSnapshot): void {
       </div>
       <div class="mobile-controls" aria-hidden="true">
         <div class="pad">
-          <button data-control="left">←</button>
-          <button data-control="right">→</button>
+          <button data-control="left">&lt;</button>
+          <button data-control="right">&gt;</button>
         </div>
         <div class="pad">
-          <button data-control="jump">↑</button>
-          <button data-control="attack">✦</button>
-          <button data-control="throwWeapon">●</button>
+          <button data-control="jump">^</button>
+          <button data-control="attack">A</button>
+          <button data-control="throwWeapon">B</button>
         </div>
       </div>
     </main>
@@ -309,12 +348,6 @@ window.addEventListener("fc:match-end", () => {
 
 function bindPlayerControls(): void {
   document.querySelector<HTMLInputElement>("#player-name")?.addEventListener("input", syncLocalPlayer);
-  document.querySelectorAll<HTMLButtonElement>("[data-cat]").forEach((button) => {
-    button.addEventListener("click", () => {
-      localPlayer = { ...localPlayer, cat: button.dataset.cat as PlayerSetup["cat"] };
-      renderHome();
-    });
-  });
 }
 
 function bindMobileControls(): void {
@@ -339,6 +372,13 @@ function syncLocalPlayer(): void {
     ...localPlayer,
     name: name || "Player 1",
   };
+}
+
+function syncLocalPlayerFromRoom(room: RoomSnapshot): void {
+  const roomPlayer = room.players.find((player) => player.id === localPlayer.id);
+  if (roomPlayer) {
+    localPlayer = roomPlayer;
+  }
 }
 
 function updateCustomFields(): void {

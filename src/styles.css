@@ -88,6 +88,11 @@ select:disabled {
   width: min(100%, 1040px);
 }
 
+.home-card {
+  display: grid;
+  gap: 22px;
+}
+
 .brand,
 .topline,
 .room-header {
@@ -99,6 +104,11 @@ select:disabled {
 
 .brand {
   justify-content: flex-start;
+}
+
+.home-brand {
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .mark {
@@ -122,12 +132,29 @@ h1 {
   line-height: 0.95;
 }
 
+h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
 .brand p,
+.home-copy p,
 .note,
 .eyebrow,
 .player-card span,
 .room-summary {
   color: #b8c4d8;
+}
+
+.home-copy {
+  display: grid;
+  gap: 8px;
+  max-width: 640px;
+}
+
+.home-copy h2 {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
 }
 
 .player-panel,
@@ -155,6 +182,10 @@ select {
   color: #f8fafc;
 }
 
+.compact {
+  max-width: 430px;
+}
+
 .cat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
@@ -170,8 +201,19 @@ select {
   min-width: 0;
 }
 
+.cat-chip small {
+  margin-left: auto;
+  color: #9fb0c7;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
 .cat-chip.selected {
   outline: 2px solid #ffd166;
+}
+
+.cat-chip.taken {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .cat-dot {
@@ -189,11 +231,19 @@ select {
   gap: 12px;
 }
 
+.home-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+}
+
 .join-form {
   display: grid;
-  grid-column: 1 / -1;
   grid-template-columns: 1fr auto;
   gap: 12px;
+}
+
+.hidden {
+  display: none;
 }
 
 .note {
@@ -258,9 +308,33 @@ select {
   gap: 16px;
 }
 
+.section-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .roster {
   display: grid;
   gap: 10px;
+}
+
+.room-side {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.cat-selection {
+  display: grid;
+  gap: 2px;
+}
+
+.room-cat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  margin-top: 0;
 }
 
 .player-card,
@@ -282,8 +356,8 @@ select {
 }
 
 .room-summary {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-  padding-left: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 16px;
   line-height: 1.6;
 }
 
@@ -408,6 +482,7 @@ select {
   }
 
   .actions,
+  .home-actions,
   .settings-grid,
   .room-layout {
     grid-template-columns: 1fr;

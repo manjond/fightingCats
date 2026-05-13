@@ -25,10 +25,11 @@ export function createLocalPlayer(name = "Player 1"): PlayerSetup {
 }
 
 export function createRoom(host: PlayerSetup, settings: RoomSettings): RoomSnapshot {
+  const assignedHost = withAvailableCat(host, []);
   const room: RoomSnapshot = {
     code: makeCode(),
-    hostId: host.id,
-    players: [host],
+    hostId: assignedHost.id,
+    players: [assignedHost],
     settings: normalizeSettings(settings),
     createdAt: Date.now(),
   };
@@ -50,9 +51,10 @@ export function quickPlay(player: PlayerSetup): RoomSnapshot {
     return createRoom(player, defaultSettings);
   }
 
+  const assignedPlayer = withAvailableCat(player, available.players);
   const joined = {
     ...available,
-    players: [...available.players.filter((candidate) => candidate.id !== player.id), player],
+    players: [...available.players.filter((candidate) => candidate.id !== assignedPlayer.id), assignedPlayer],
   };
   saveRoom(joined);
   return joined;
@@ -65,9 +67,10 @@ export function joinRoom(code: string, player: PlayerSetup): RoomSnapshot | null
     return null;
   }
 
+  const assignedPlayer = withAvailableCat(player, room.players);
   const joined = {
     ...room,
-    players: [...room.players.filter((candidate) => candidate.id !== player.id), player],
+    players: [...room.players.filter((candidate) => candidate.id !== assignedPlayer.id), assignedPlayer],
   };
   saveRoom(joined);
   return joined;
@@ -96,7 +99,9 @@ export function fillWithBots(room: RoomSnapshot): RoomSnapshot {
 }
 
 export function roomWithUpdatedHost(room: RoomSnapshot, player: PlayerSetup): RoomSnapshot {
-  const players = room.players.map((candidate) => (candidate.id === player.id ? player : candidate));
+  const otherPlayers = room.players.filter((candidate) => candidate.id !== player.id);
+  const assignedPlayer = withAvailableCat(player, otherPlayers);
+  const players = room.players.map((candidate) => (candidate.id === assignedPlayer.id ? assignedPlayer : candidate));
   const updated = { ...room, players };
   saveRoom(updated);
   return updated;
@@ -143,6 +148,18 @@ function makeCode(): string {
     code += LETTERS[Math.floor(Math.random() * LETTERS.length)];
   }
   return code;
+}
+
+function withAvailableCat(player: PlayerSetup, existingPlayers: PlayerSetup[]): PlayerSetup {
+  const usedCats = new Set(existingPlayers.filter((candidate) => candidate.id !== player.id).map((candidate) => candidate.cat));
+  if (!usedCats.has(player.cat)) {
+    return player;
+  }
+
+  return {
+    ...player,
+    cat: CATS.find((cat) => !usedCats.has(cat.id))?.id ?? player.cat,
+  };
 }
 
 function clamp(value: number, min: number, max: number): number {

@@ -6,7 +6,11 @@ export type CatId =
   | "calico"
   | "gray"
   | "siamese"
-  | "tuxedo";
+  | "tuxedo"
+  | "striped"
+  | "white"
+  | "blue"
+  | "gold";
 
 export type WeaponId = "scratch" | "pistol" | "yarn" | "bomb";
 
