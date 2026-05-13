@@ -1,5 +1,5 @@
 import "./styles.css";
-import { CATS, MAPS, STARTING_WEAPONS, WEAPONS } from "./game/config";
+import { CATS, MAPS, STARTING_WEAPONS, WEAPONS, WORLD } from "./game/config";
 import { destroyGame, mountGame } from "./game/createGame";
 import {
   createLocalPlayer,
@@ -11,7 +11,7 @@ import {
   quickPlay,
   roomWithUpdatedHost,
 } from "./game/rooms";
-import type { CatId, MatchResult, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
+import type { CatId, MapConfig, MatchResult, PlatformConfig, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -147,9 +147,10 @@ function renderCreateRoom(): void {
             <legend>Mapas custom</legend>
             ${MAPS.map(
               (map) => `
-                <label class="check-row">
+                <label class="map-option">
                   <input type="checkbox" name="maps" value="${map.id}" ${settings.mapIds.includes(map.id) ? "checked" : ""} />
-                  ${map.name}
+                  ${renderMapPreview(map)}
+                  <span>${map.name}</span>
                 </label>
               `,
             ).join("")}
@@ -385,6 +386,24 @@ function updateCustomFields(): void {
   document.querySelectorAll<HTMLInputElement | HTMLSelectElement>("#rounds, #starting-weapon, .map-picker input").forEach((field) => {
     field.disabled = !custom;
   });
+}
+
+function renderMapPreview(map: MapConfig): string {
+  return `
+    <span class="map-preview map-theme-${map.theme}" aria-hidden="true">
+      ${map.platforms.map((platform) => `<i class="preview-platform" style="${previewStyle(platform)}"></i>`).join("")}
+      ${map.hazards.map((hazard) => `<i class="preview-hazard" style="${previewStyle(hazard)}"></i>`).join("")}
+      ${map.boosters.map((booster) => `<i class="preview-booster ${booster.kind}" style="${previewStyle(booster)}"></i>`).join("")}
+    </span>
+  `;
+}
+
+function previewStyle(item: PlatformConfig): string {
+  const left = ((item.x - item.width / 2) / WORLD.width) * 100;
+  const top = ((item.y - item.height / 2) / WORLD.height) * 100;
+  const width = (item.width / WORLD.width) * 100;
+  const height = Math.max((item.height / WORLD.height) * 100, 2.4);
+  return `left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;width:${width.toFixed(2)}%;height:${height.toFixed(2)}%;`;
 }
 
 function readInput(id: string): string {
