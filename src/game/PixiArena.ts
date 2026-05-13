@@ -687,11 +687,7 @@ export class PixiArena {
   private performMelee(actor: Actor, weaponId: WeaponId): void {
     const weapon = WEAPONS[weaponId];
     const originX = actor.x + actor.facing * 32;
-    const slash = new Graphics();
-    slash.arc(originX, actor.y, weapon.range * 0.46, -0.95, 0.95).stroke({ width: 8, color: weaponId === "fishbat" ? 0x78c6a3 : 0xf7f7ff, alpha: 0.55 });
-    slash.scale.x = actor.facing;
-    this.world.addChild(slash);
-    this.fadeAndDestroy(slash, 170, 1.8);
+    this.addMeleeHitSpark(actor, weaponId);
 
     for (const target of this.actors) {
       if (target === actor || !target.alive) {
@@ -962,7 +958,7 @@ export class PixiArena {
 
     actor.view.x = actor.x;
     actor.view.y = actor.y;
-    actor.catView.scale.set(actor.facing * 1.16, 1.16);
+    actor.catView.scale.set(actor.facing * 1.02, 1.02);
     actor.weaponView.x = xOffset;
     actor.weaponView.y = yOffset;
     actor.weaponView.rotation = angle;
@@ -1047,6 +1043,23 @@ export class PixiArena {
     this.fadeAndDestroy(puff, 180, 1.8);
   }
 
+  private addMeleeHitSpark(actor: Actor, weaponId: WeaponId): void {
+    const spark = new Container();
+    const g = new Graphics();
+    const color = weaponId === "fishbat" ? 0x9ee6c1 : 0xf8fafc;
+    spark.x = actor.x + actor.facing * (weaponId === "fishbat" ? 48 : 34);
+    spark.y = actor.y - 8;
+    spark.scale.x = actor.facing;
+
+    g.rect(-2, -12, 5, 24).fill({ color, alpha: 0.92 });
+    g.rect(8, -6, 18, 5).fill({ color, alpha: 0.78 });
+    g.rect(8, 4, 13, 4).fill({ color, alpha: 0.62 });
+    g.rect(-10, -3, 7, 6).fill({ color: 0xffd166, alpha: 0.82 });
+    spark.addChild(g);
+    this.world.addChild(spark);
+    this.fadeAndDestroy(spark, 120, 1.25);
+  }
+
   private fadeAndDestroy(item: Container, duration: number, scaleTarget: number): void {
     const bornAt = performance.now();
     const tick = (): void => {
@@ -1124,57 +1137,70 @@ export class PixiArena {
     const cat = CATS.find((candidate) => candidate.id === catId) ?? CATS[0];
 
     if (weapon === "scratch") {
-      g.rect(-12, -7, 20, 15).fill(OUTLINE);
-      g.rect(-9, -4, 15, 10).fill(cat.body);
-      g.poly([8, -11, 20, -16, 13, -4]).fill(0xf8fafc);
-      g.poly([11, -1, 24, -2, 14, 8]).fill(0xf8fafc);
-      g.poly([7, 11, 18, 16, 12, 4]).fill(0xf8fafc);
+      g.rect(-14, -9, 22, 18).fill(OUTLINE);
+      g.rect(-10, -5, 15, 11).fill(cat.body);
+      g.rect(-13, -13, 6, 6).fill(cat.body);
+      g.rect(-5, -16, 6, 6).fill(cat.body);
+      g.rect(3, -13, 6, 6).fill(cat.body);
+      g.poly([7, -12, 20, -17, 13, -4]).fill(0xf8fafc);
+      g.poly([10, -1, 24, -2, 14, 8]).fill(0xf8fafc);
+      g.poly([6, 11, 18, 16, 12, 4]).fill(0xf8fafc);
     } else if (weapon === "pistol") {
-      g.rect(-16, -6, 32, 13).fill(OUTLINE);
-      g.rect(-4, 6, 11, 11).fill(OUTLINE);
-      g.rect(-14, -8, 24, 10).fill(0x62d2ff);
-      g.rect(-3, 4, 8, 11).fill(0x2374d7);
-      g.rect(10, -6, 10, 4).fill(0xffd166);
+      g.rect(-18, -8, 34, 14).fill(OUTLINE);
+      g.rect(-5, 5, 12, 13).fill(OUTLINE);
+      g.rect(-15, -10, 25, 10).fill(0x62d2ff);
+      g.rect(-11, -6, 12, 3).fill(0xbdefff);
+      g.rect(-3, 4, 8, 12).fill(0x2374d7);
+      g.rect(10, -8, 13, 5).fill(0xffd166);
+      g.rect(18, -4, 7, 3).fill(0xbdefff);
     } else if (weapon === "fishbat") {
-      g.rect(-18, -6, 36, 12).fill(OUTLINE);
-      g.rect(-22, -4, 8, 8).fill(OUTLINE);
-      g.rect(-15, -5, 28, 10).fill(0x78c6a3);
-      g.rect(-20, -3, 8, 6).fill(0x78c6a3);
-      g.rect(4, -4, 7, 4).fill(0xe8f7ef);
+      g.rect(-22, -7, 40, 14).fill(OUTLINE);
+      g.poly([-25, 0, -16, -9, -16, 9]).fill(OUTLINE);
+      g.rect(-18, -5, 31, 10).fill(0x78c6a3);
+      g.poly([-23, 0, -17, -6, -17, 6]).fill(0x78c6a3);
+      g.rect(2, -4, 8, 4).fill(0xe8f7ef);
+      g.rect(-9, 3, 17, 2).fill(0x315f52);
       g.rect(14, -3, 3, 3).fill(0x10231d);
     } else if (weapon === "sardine") {
-      g.rect(-16, -5, 31, 11).fill(OUTLINE);
-      g.rect(-22, -3, 8, 7).fill(OUTLINE);
+      g.rect(-17, -6, 32, 12).fill(OUTLINE);
+      g.poly([-24, 0, -15, -8, -15, 8]).fill(OUTLINE);
       g.rect(-13, -4, 24, 9).fill(0xb8d8e8);
-      g.rect(-20, -2, 8, 5).fill(0xb8d8e8);
+      g.poly([-21, 0, -14, -5, -14, 5]).fill(0xb8d8e8);
+      g.rect(-4, -3, 13, 2).fill(0xf8fafc);
       g.rect(12, -3, 3, 3).fill(0x2a6f97);
     } else if (weapon === "spray") {
-      g.rect(-9, -14, 20, 29).fill(OUTLINE);
-      g.rect(-4, -18, 11, 6).fill(OUTLINE);
-      g.rect(-7, -10, 16, 23).fill(0xffc857);
-      g.rect(-4, -17, 10, 5).fill(0x2f80ed);
-      g.rect(12, -13, 4, 4).fill(0x5de0e6);
-      g.rect(17, -17, 7, 2).fill(0x5de0e6);
-      g.rect(17, -9, 7, 2).fill(0x5de0e6);
+      g.rect(-10, -15, 21, 31).fill(OUTLINE);
+      g.rect(-5, -20, 12, 7).fill(OUTLINE);
+      g.rect(-7, -11, 16, 24).fill(0xffc857);
+      g.rect(-4, -18, 10, 5).fill(0x2f80ed);
+      g.rect(-4, -2, 10, 3).fill(0xffffff);
+      g.rect(12, -14, 5, 5).fill(0x5de0e6);
+      g.rect(18, -19, 8, 2).fill(0x5de0e6);
+      g.rect(18, -10, 8, 2).fill(0x5de0e6);
+      g.rect(18, -1, 6, 2).fill(0x5de0e6);
     } else if (weapon === "bell") {
-      g.rect(-11, -10, 22, 22).fill(OUTLINE);
+      g.rect(-12, -11, 24, 24).fill(OUTLINE);
       g.rect(-6, -15, 12, 7).fill(OUTLINE);
-      g.rect(-9, -8, 18, 17).fill(0xf4d35e);
+      g.rect(-9, -8, 18, 18).fill(0xf4d35e);
       g.rect(-5, -14, 10, 5).fill(0xd89c00);
-      g.rect(-2, 9, 5, 4).fill(0x302311);
-      g.rect(8, -15, 10, 3).fill(0xff7f50);
+      g.rect(-6, -3, 12, 3).fill(0xffe8a3);
+      g.rect(-2, 10, 5, 4).fill(0x302311);
+      g.rect(8, -16, 12, 3).fill(0xff7f50);
     } else if (weapon === "yarn") {
-      g.rect(-14, -14, 27, 27).fill(OUTLINE);
-      g.rect(-12, -12, 23, 23).fill(0xe76f9d);
-      g.rect(-11, -4, 21, 3).fill(0xffc2d6);
-      g.rect(-8, -11, 3, 22).fill(0xffc2d6);
-      g.rect(1, -11, 3, 22).fill(0xffc2d6);
+      g.rect(-15, -15, 30, 30).fill(OUTLINE);
+      g.rect(-12, -12, 24, 24).fill(0xe76f9d);
+      g.rect(-12, -4, 24, 3).fill(0xffc2d6);
+      g.rect(-8, -12, 3, 24).fill(0xffc2d6);
+      g.rect(2, -12, 3, 24).fill(0xffc2d6);
+      g.rect(-10, 6, 19, 3).fill(0x9d3b6d);
     } else {
-      g.rect(-13, -12, 26, 27).fill(OUTLINE);
+      g.rect(-14, -13, 28, 28).fill(OUTLINE);
       g.rect(-4, -19, 7, 9).fill(OUTLINE);
       g.rect(-11, -10, 22, 22).fill(0x243b53);
+      g.rect(-6, -7, 7, 5).fill(0x5a718a);
       g.rect(-3, -18, 5, 8).fill(0xf4d35e);
-      g.rect(3, -20, 10, 3).fill(0xff7f50);
+      g.rect(3, -20, 12, 3).fill(0xff7f50);
+      g.rect(14, -23, 4, 4).fill(0xffd166);
     }
 
     view.addChild(g);
