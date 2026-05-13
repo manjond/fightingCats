@@ -44,7 +44,6 @@ function renderHome(): void {
           <span class="mark">FC</span>
           <div>
             <h1>Fighting Cats</h1>
-            <p>Prototype embed para Coopverse</p>
           </div>
         </div>
 

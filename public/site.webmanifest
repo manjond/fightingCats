@@ -1,0 +1,21 @@
+{
+  "name": "Fighting Cats",
+  "short_name": "Fighting Cats",
+  "description": "A fast browser platform fighting game with cat fighters, weapons, arenas, and mobile controls.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#10131d",
+  "theme_color": "#28b485",
+  "icons": [
+    {
+      "src": "/images/fighting-cats-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/fighting-cats-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
