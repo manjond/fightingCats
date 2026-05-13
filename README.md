@@ -46,17 +46,23 @@ The likely path: keep Phaser client prediction simple, use a room service for pr
 
 ## Vercel Deployment
 
-When the GitHub remote is connected:
+The repository includes `vercel.json`, so Vercel should detect the exact build settings:
 
-1. Push `main` to GitHub.
-2. Open Vercel dashboard.
-3. Select **Add New > Project**.
-4. Import the `fightingCats` GitHub repository.
-5. Framework preset: **Vite**.
-6. Build command: `npm run build`.
-7. Output directory: `dist`.
-8. Install command: `npm install`.
-9. Deploy.
-10. In project settings, add the production domain or embed URL allowed by `coopverse.io` when we wire the final embed.
+- Framework preset: `Vite`
+- Install command: `npm install`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Node: `>=20.19.0`
+
+Dashboard steps:
+
+1. Open Vercel dashboard.
+2. Select **Add New > Project**.
+3. Import `manjond/fightingCats`.
+4. Keep the root directory as `./`.
+5. Confirm the settings above if Vercel asks.
+6. Deploy.
+7. After deploy, copy the production URL.
+8. Use the production URL as the iframe/embed target in Coopverse.
 
 For embedding, the clean target is to host this as a standalone Vercel app and place it inside Coopverse with an iframe or route-level integration, depending on the Coopverse stack.
