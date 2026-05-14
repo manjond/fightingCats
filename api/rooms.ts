@@ -1,9 +1,36 @@
-import { CATS, STANDARD_MAP_IDS, WORLD } from "../src/game/config";
-import type { PlayerSetup, RoomSettings, RoomSnapshot, WeaponId } from "../src/game/types";
-
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_TTL_SECONDS = 60 * 60 * 3;
 const INDEX_KEY = "fighting-cats:rooms";
+const MAX_PLAYERS = 8;
+const CAT_IDS = ["orange", "black", "brown", "persian", "calico", "gray", "siamese", "tuxedo", "striped", "white", "blue", "gold"] as const;
+const STANDARD_MAP_IDS = ["roof-run", "greenhouse", "subway", "dojo", "harbor"];
+
+type CatId = (typeof CAT_IDS)[number];
+type WeaponId = "scratch" | "pistol" | "yarn" | "bomb" | "fishbat" | "sardine" | "spray" | "bell" | "kibble" | "feedbag";
+
+interface PlayerSetup {
+  id: string;
+  name: string;
+  cat: CatId;
+  bot: boolean;
+}
+
+interface RoomSettings {
+  visibility: "public" | "private";
+  mode: "standard" | "custom";
+  maxPlayers: number;
+  mapIds: string[];
+  rounds: number;
+  startingWeapon: WeaponId;
+}
+
+interface RoomSnapshot {
+  code: string;
+  hostId: string;
+  players: PlayerSetup[];
+  settings: RoomSettings;
+  createdAt: number;
+}
 
 const defaultSettings: RoomSettings = {
   visibility: "public",
@@ -195,7 +222,7 @@ function withAvailableCat(player: PlayerSetup, existingPlayers: PlayerSetup[]): 
 
   return {
     ...player,
-    cat: CATS.find((cat) => !usedCats.has(cat.id))?.id ?? player.cat,
+    cat: CAT_IDS.find((cat) => !usedCats.has(cat)) ?? player.cat,
   };
 }
 
@@ -206,7 +233,7 @@ function normalizeSettings(settings: RoomSettings): RoomSettings {
   return {
     visibility: settings.visibility,
     mode: settings.mode,
-    maxPlayers: clamp(settings.maxPlayers, 2, WORLD.maxPlayers),
+    maxPlayers: clamp(settings.maxPlayers, 2, MAX_PLAYERS),
     mapIds: mapIds.length > 0 ? mapIds : STANDARD_MAP_IDS,
     rounds,
     startingWeapon: settings.startingWeapon as WeaponId,
