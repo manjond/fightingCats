@@ -1,5 +1,7 @@
 import { Application, Container, Graphics, Text, TextStyle, Ticker } from "pixi.js";
 import { CATS, getMapById, MAPS, WEAPONS, WORLD } from "./config";
+import { createArenaRealtimeClient, type ArenaRealtimeClient } from "./realtimeClient";
+import type { RealtimeInput, RealtimePickupState, RealtimeSnapshot } from "./realtimeTypes";
 import type { CatId, HazardConfig, MapConfig, MatchConfig, MatchResult, PlatformConfig, PlayerSetup, RuntimeControls, WeaponId } from "./types";
 import { getMapName, getStoredLanguage, getText, getWeaponName } from "../i18n";
 
@@ -99,6 +101,11 @@ export class PixiArena {
   private initialized = false;
   private hitStopUntil = 0;
   private lastTime = performance.now();
+  private realtime: ArenaRealtimeClient | null = null;
+  private latestRealtimeSnapshot: RealtimeSnapshot | null = null;
+  private inputSeq = 0;
+  private realtimeRoundEventKey = "";
+  private realtimeMatchEnded = false;
 
   constructor(
     private parent: HTMLElement,
@@ -134,11 +141,14 @@ export class PixiArena {
     this.resize();
     this.bindKeyboard();
     this.startRound();
+    this.connectRealtime();
     this.app.ticker.add(this.tick);
   }
 
   destroy(): void {
     this.destroyed = true;
+    this.realtime?.close();
+    this.realtime = null;
     this.timers.forEach((timer) => window.clearTimeout(timer));
     this.timers = [];
     window.removeEventListener("keydown", this.onKeyDown);
@@ -181,8 +191,28 @@ export class PixiArena {
 
     const delta = Math.min(0.033, (now - this.lastTime) / 1000);
     this.lastTime = now;
+    if (this.realtime) {
+      this.realtime.sendInput(this.readLocalInput());
+      this.applyRealtimeSnapshot();
+      return;
+    }
     this.update(now, delta);
   };
+
+  private connectRealtime(): void {
+    this.realtime = createArenaRealtimeClient(
+      this.match.room,
+      this.match.localPlayerId,
+      (snapshot) => {
+        this.latestRealtimeSnapshot = snapshot;
+      },
+      (status) => {
+        if (status !== "open") {
+          console.warn(`[realtime] ${status}`);
+        }
+      },
+    );
+  }
 
   private startRound(): void {
     this.roundFinished = false;
@@ -568,11 +598,7 @@ export class PixiArena {
   }
 
   private updateLocalActor(actor: Actor, now: number, delta: number): void {
-    const left = this.controls.left || this.keys.has("ArrowLeft") || this.keys.has("KeyA");
-    const right = this.controls.right || this.keys.has("ArrowRight") || this.keys.has("KeyD");
-    const jump = this.controls.jump || this.keys.has("ArrowUp") || this.keys.has("KeyW") || this.keys.has("Space");
-    const attack = this.controls.attack || this.keys.has("KeyJ");
-    const throwWeapon = this.controls.throwWeapon || this.keys.has("KeyK") || this.keys.has("ShiftLeft") || this.keys.has("ShiftRight");
+    const { left, right, jump, attack, throwWeapon } = this.readLocalInput();
 
     this.moveActor(actor, left, right, jump, delta, now);
 
@@ -583,6 +609,18 @@ export class PixiArena {
     if (throwWeapon && actor.weapon !== "scratch" && WEAPONS[actor.weapon].kind !== "melee") {
       this.tryAttack(actor, actor.weapon, now);
     }
+  }
+
+  private readLocalInput(): RealtimeInput {
+    this.inputSeq += 1;
+    return {
+      left: this.controls.left || this.keys.has("ArrowLeft") || this.keys.has("KeyA"),
+      right: this.controls.right || this.keys.has("ArrowRight") || this.keys.has("KeyD"),
+      jump: this.controls.jump || this.keys.has("ArrowUp") || this.keys.has("KeyW") || this.keys.has("Space"),
+      attack: this.controls.attack || this.keys.has("KeyJ"),
+      throwWeapon: this.controls.throwWeapon || this.keys.has("KeyK") || this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"),
+      seq: this.inputSeq,
+    };
   }
 
   private updateBot(actor: Actor, now: number, delta: number): void {
@@ -1013,6 +1051,82 @@ export class PixiArena {
       .map(([playerId, points]) => `${this.match.room.players.find((player) => player.id === playerId)?.name}: ${points}`)
       .join("  ");
     this.hud.text = `${getText(language, "round")} ${this.roundIndex + 1}/${this.mapOrder.length} - ${mapName}\n${getText(language, "alive")}: ${alive} - ${getText(language, "weapon")}: ${localWeapon}\n${ranking}`;
+  }
+
+  private applyRealtimeSnapshot(): void {
+    const snapshot = this.latestRealtimeSnapshot;
+    if (!snapshot) {
+      return;
+    }
+
+    if (snapshot.roundIndex !== this.roundIndex) {
+      this.roundIndex = snapshot.roundIndex;
+      this.startRound();
+    }
+
+    const now = performance.now();
+    for (const actorState of snapshot.actors) {
+      const actor = this.actors.find((candidate) => candidate.setup.id === actorState.id);
+      if (!actor) {
+        continue;
+      }
+      actor.x = actorState.x;
+      actor.y = actorState.y;
+      actor.vx = actorState.vx;
+      actor.vy = actorState.vy;
+      actor.facing = actorState.facing;
+      actor.health = actorState.health;
+      actor.alive = actorState.alive;
+      actor.weapon = actorState.weapon;
+      actor.weaponUses = actorState.weaponUses;
+      actor.view.visible = actorState.alive;
+      this.updateActorView(actor, now);
+    }
+
+    this.scores = { ...snapshot.scores };
+    this.syncRealtimePickups(snapshot.pickups);
+    this.updatePickups(now);
+    this.updateHud();
+
+    if ((snapshot.phase === "round-end" || snapshot.phase === "match-end") && snapshot.ranking.length) {
+      const key = `${snapshot.roundIndex}-${snapshot.phase}`;
+      if (this.realtimeRoundEventKey !== key) {
+        this.realtimeRoundEventKey = key;
+        const result = this.createRealtimeResult(snapshot);
+        window.dispatchEvent(new CustomEvent("fc:round-end", { detail: result }));
+        this.banner.text = `${snapshot.ranking[0].name} ${getText(getStoredLanguage(), "winsRound")}`;
+      }
+    }
+
+    if (snapshot.phase === "match-end" && !this.realtimeMatchEnded) {
+      this.realtimeMatchEnded = true;
+      window.dispatchEvent(new CustomEvent("fc:match-end", { detail: this.createRealtimeResult(snapshot) }));
+    }
+  }
+
+  private createRealtimeResult(snapshot: RealtimeSnapshot): MatchResult {
+    return {
+      ranking: snapshot.ranking,
+      points: { ...snapshot.scores },
+      mapName: getMapName(getStoredLanguage(), snapshot.mapId),
+    };
+  }
+
+  private syncRealtimePickups(nextPickups: RealtimePickupState[]): void {
+    const nextKeys = new Set(nextPickups.map((pickup) => `${pickup.x}:${pickup.y}:${pickup.weapon}`));
+    for (const pickup of [...this.pickups]) {
+      if (!nextKeys.has(`${pickup.x}:${pickup.y}:${pickup.weapon}`)) {
+        this.removePickup(pickup);
+      }
+    }
+
+    const existingKeys = new Set(this.pickups.map((pickup) => `${pickup.x}:${pickup.y}:${pickup.weapon}`));
+    for (const pickup of nextPickups) {
+      const key = `${pickup.x}:${pickup.y}:${pickup.weapon}`;
+      if (!existingKeys.has(key)) {
+        this.createWeaponPickup(pickup.x, pickup.y, pickup.weapon);
+      }
+    }
   }
 
   private updateActorView(actor: Actor, now: number): void {

@@ -8,15 +8,19 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:realtime": "partykit dev",
+    "deploy:realtime": "partykit deploy",
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "partysocket": "^1.1.19",
     "pixi.js": "^8.18.1"
   },
   "devDependencies": {
     "@types/node": "^25.7.0",
+    "partykit": "^0.0.115",
     "typescript": "^5.9.3",
     "vite": "^7.2.7"
   }
