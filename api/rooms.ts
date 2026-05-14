@@ -30,6 +30,11 @@ interface RoomSnapshot {
   players: PlayerSetup[];
   settings: RoomSettings;
   createdAt: number;
+  match?: {
+    status: "playing";
+    startedAt: number;
+    players: PlayerSetup[];
+  };
 }
 
 const defaultSettings: RoomSettings = {
@@ -45,6 +50,8 @@ const redisRestUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_A
 const redisRestToken = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
 type RedisResult<T = unknown> = { result?: T; error?: string };
+
+const BOT_NAMES = ["Miso", "Pixel", "Nube", "Taco", "Bowie", "Lua", "Kiro"];
 
 export default async function handler(req: any, res: any): Promise<void> {
   if (!hasRedisConfig()) {
@@ -92,6 +99,12 @@ export default async function handler(req: any, res: any): Promise<void> {
       return;
     }
 
+    if (action === "start") {
+      const room = await startMatch(String(body.code ?? ""), body.player);
+      res.status(room ? 200 : 404).json(room ?? { error: "Room not found" });
+      return;
+    }
+
     res.status(400).json({ error: "Unknown action" });
   } catch (error) {
     console.error("[rooms-api]", error);
@@ -117,6 +130,7 @@ async function quickPlay(player: PlayerSetup): Promise<RoomSnapshot> {
   const rooms = await loadIndexedRooms();
   const available = rooms.find(
     (room) =>
+      room.match?.status !== "playing" &&
       room.settings.visibility === "public" &&
       room.players.length < room.settings.maxPlayers &&
       Date.now() - room.createdAt < ROOM_TTL_SECONDS * 1000,
@@ -132,6 +146,10 @@ async function quickPlay(player: PlayerSetup): Promise<RoomSnapshot> {
 async function joinRoom(code: string, player: PlayerSetup): Promise<RoomSnapshot | null> {
   const room = await getRoom(code);
   if (!room) {
+    return null;
+  }
+
+  if (room.match?.status === "playing") {
     return null;
   }
 
@@ -161,6 +179,24 @@ async function updatePlayer(code: string, player: PlayerSetup): Promise<RoomSnap
     ? room.players.map((candidate) => (candidate.id === assignedPlayer.id ? assignedPlayer : candidate))
     : [...room.players, assignedPlayer];
   const updated = { ...room, players };
+  await saveRoom(updated);
+  return updated;
+}
+
+async function startMatch(code: string, player: PlayerSetup): Promise<RoomSnapshot | null> {
+  const room = await updatePlayer(code, player);
+  if (!room) {
+    return null;
+  }
+
+  const updated = {
+    ...room,
+    match: {
+      status: "playing" as const,
+      startedAt: Date.now(),
+      players: fillWithBots(room),
+    },
+  };
   await saveRoom(updated);
   return updated;
 }
@@ -224,6 +260,25 @@ function withAvailableCat(player: PlayerSetup, existingPlayers: PlayerSetup[]): 
     ...player,
     cat: CAT_IDS.find((cat) => !usedCats.has(cat)) ?? player.cat,
   };
+}
+
+function fillWithBots(room: RoomSnapshot): PlayerSetup[] {
+  const targetPlayers = Math.min(room.settings.maxPlayers, MAX_PLAYERS);
+  const usedCats = new Set(room.players.map((player) => player.cat));
+  const players = [...room.players];
+
+  for (let index = players.length; index < targetPlayers; index += 1) {
+    const cat = CAT_IDS.find((candidate) => !usedCats.has(candidate)) ?? CAT_IDS[index % CAT_IDS.length];
+    usedCats.add(cat);
+    players.push({
+      id: `bot-${index}-${room.code}`,
+      name: BOT_NAMES[(index - 1) % BOT_NAMES.length],
+      cat,
+      bot: true,
+    });
+  }
+
+  return players;
 }
 
 function normalizeSettings(settings: RoomSettings): RoomSettings {

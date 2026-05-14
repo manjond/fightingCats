@@ -10,6 +10,7 @@ import {
   joinRoom,
   normalizeSettings,
   quickPlay,
+  startRoomMatch,
   roomWithUpdatedHost,
 } from "./game/rooms";
 import type { CatId, MapConfig, MatchResult, PlatformConfig, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
@@ -293,8 +294,7 @@ function renderRoom(room: RoomSnapshot): void {
   });
   document.querySelector("#start-match")?.addEventListener("click", async () => {
     try {
-      const updatedRoom = await roomWithUpdatedHost(room, localPlayer);
-      const readyRoom = fillWithBots(updatedRoom);
+      const readyRoom = await startRoomMatch(room, localPlayer);
       activeRoom = readyRoom;
       renderGame(readyRoom);
     } catch (error) {
@@ -422,6 +422,13 @@ function startRoomPolling(code: string): void {
     try {
       const latestRoom = await getRoom(code);
       if (!latestRoom || activeRoom?.code !== code) {
+        return;
+      }
+
+      if (latestRoom.match?.status === "playing") {
+        const readyRoom = fillWithBots(latestRoom);
+        activeRoom = readyRoom;
+        renderGame(readyRoom);
         return;
       }
 

@@ -216,10 +216,10 @@ export class PixiArena {
     const aliveActors = this.actors.filter((actor) => actor.alive);
 
     for (const actor of aliveActors) {
-      if (actor.setup.bot) {
-        this.updateBot(actor, now, delta);
-      } else {
+      if (actor.setup.id === this.match.localPlayerId) {
         this.updateLocalActor(actor, now, delta);
+      } else {
+        this.updateBot(actor, now, delta);
       }
     }
 

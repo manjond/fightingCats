@@ -91,6 +91,11 @@ export interface RoomSnapshot {
   players: PlayerSetup[];
   settings: RoomSettings;
   createdAt: number;
+  match?: {
+    status: "playing";
+    startedAt: number;
+    players: PlayerSetup[];
+  };
 }
 
 export interface MatchResult {

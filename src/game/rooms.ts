@@ -113,6 +113,13 @@ export async function joinRoom(code: string, player: PlayerSetup): Promise<RoomS
 }
 
 export function fillWithBots(room: RoomSnapshot): RoomSnapshot {
+  if (room.match?.players.length) {
+    return {
+      ...room,
+      players: room.match.players,
+    };
+  }
+
   const targetPlayers = Math.min(room.settings.maxPlayers, WORLD.maxPlayers);
   const usedCats = new Set(room.players.map((player) => player.cat));
   const bots: PlayerSetup[] = [];
@@ -134,6 +141,27 @@ export function fillWithBots(room: RoomSnapshot): RoomSnapshot {
   };
 }
 
+export async function startRoomMatch(room: RoomSnapshot, player: PlayerSetup): Promise<RoomSnapshot> {
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("start", { code: room.code, player });
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return fillWithBots(remoteRoom);
+  }
+
+  assertLocalRoomsAllowed();
+
+  const updated = {
+    ...roomWithLocalPlayer(room, player),
+    match: {
+      status: "playing" as const,
+      startedAt: Date.now(),
+      players: fillWithBots(roomWithLocalPlayer(room, player)).players,
+    },
+  };
+  saveRoom(updated);
+  return fillWithBots(updated);
+}
+
 export async function getRoom(code: string): Promise<RoomSnapshot | null> {
   const remoteRoom = await fetchRoom(code);
   if (remoteRoom) {
@@ -153,12 +181,18 @@ export async function roomWithUpdatedHost(room: RoomSnapshot, player: PlayerSetu
 
   assertLocalRoomsAllowed();
 
-  const otherPlayers = room.players.filter((candidate) => candidate.id !== player.id);
-  const assignedPlayer = withAvailableCat(player, otherPlayers);
-  const players = room.players.map((candidate) => (candidate.id === assignedPlayer.id ? assignedPlayer : candidate));
-  const updated = { ...room, players };
+  const updated = roomWithLocalPlayer(room, player);
   saveRoom(updated);
   return updated;
+}
+
+function roomWithLocalPlayer(room: RoomSnapshot, player: PlayerSetup): RoomSnapshot {
+  const otherPlayers = room.players.filter((candidate) => candidate.id !== player.id);
+  const assignedPlayer = withAvailableCat(player, otherPlayers);
+  const players = room.players.some((candidate) => candidate.id === assignedPlayer.id)
+    ? room.players.map((candidate) => (candidate.id === assignedPlayer.id ? assignedPlayer : candidate))
+    : [...room.players, assignedPlayer];
+  return { ...room, players };
 }
 
 export function normalizeSettings(settings: RoomSettings): RoomSettings {
