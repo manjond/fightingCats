@@ -20,16 +20,16 @@ interface ServerPickup extends RealtimePickupState {
   respawnAt: number;
 }
 
-const TICK_RATE = 30;
-const SNAPSHOT_RATE = 20;
+const TICK_RATE = 60;
+const SNAPSHOT_RATE = 30;
 const DELTA = 1 / TICK_RATE;
 const GRAVITY = WORLD.gravity * 1.12;
-const MAX_VY = 960;
-const MAX_VX = 590;
-const GROUND_ACCELERATION = 5600;
-const AIR_ACCELERATION = 3900;
-const GROUND_DECELERATION = 5200;
-const AIR_DECELERATION = 2800;
+const MAX_VY = 1040;
+const MAX_VX = 680;
+const GROUND_ACCELERATION = 7200;
+const AIR_ACCELERATION = 5000;
+const GROUND_DECELERATION = 6500;
+const AIR_DECELERATION = 3600;
 const INPUT_IDLE: RealtimeInput = { left: false, right: false, jump: false, attack: false, throwWeapon: false, aimX: 0, aimY: 0, seq: 0 };
 
 export default class ArenaServer implements Party.Server {

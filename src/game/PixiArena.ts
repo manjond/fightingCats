@@ -58,13 +58,13 @@ type Projectile = {
 };
 
 const OUTLINE = 0x0b1020;
-const GROUND_ACCELERATION = 5600;
-const AIR_ACCELERATION = 3900;
-const GROUND_DECELERATION = 5200;
-const AIR_DECELERATION = 2800;
+const GROUND_ACCELERATION = 7200;
+const AIR_ACCELERATION = 5000;
+const GROUND_DECELERATION = 6500;
+const AIR_DECELERATION = 3600;
 const ARENA_GRAVITY = WORLD.gravity * 1.12;
-const MAX_VX = 590;
-const MAX_VY = 960;
+const MAX_VX = 680;
+const MAX_VY = 1040;
 
 const THEME_PALETTES: Record<MapConfig["theme"], { sky: number; far: number; mid: number; accent: number; platform: number; top: number; trim: number }> = {
   rooftop: { sky: 0x17233b, far: 0x0a1020, mid: 0x243047, accent: 0xffd166, platform: 0x566173, top: 0xb6c2d6, trim: 0x2a3345 },
@@ -1250,16 +1250,42 @@ export class PixiArena {
     let yOffset = -4;
     let angle = actor.facing * (visualWeapon === "scratch" ? -0.32 : 0.24);
     let scale = visualWeapon === "scratch" ? 0.82 : 0.75;
+    let weaponScaleX = actor.facing;
+
+    if (actor.setup.id === this.match.localPlayerId) {
+      const aim = this.getAimDirection(actor);
+      const aimFacing: 1 | -1 = aim.x >= 0 ? 1 : -1;
+      actor.facing = aimFacing;
+      xOffset = aim.x * 27;
+      yOffset = -7 + aim.y * 15;
+      angle = Math.atan2(aim.y, aim.x);
+      weaponScaleX = 1;
+      if (aimFacing < 0) {
+        angle += Math.PI;
+        weaponScaleX = -1;
+      }
+    }
 
     if (activeAnimation && weapon.kind === "melee") {
       xOffset = actor.facing * (visualWeapon === "fishbat" ? 19 + pulse * 25 : 22 + pulse * 12);
       yOffset = -6 - pulse * 9;
       angle = actor.facing * this.lerp(-1.08, 1.25, swing);
+      weaponScaleX = actor.facing;
       scale += pulse * (visualWeapon === "fishbat" ? 0.25 : 0.16);
     } else if (activeAnimation) {
-      xOffset = actor.facing * (25 - pulse * 10);
-      yOffset = -5 - pulse * 5;
-      angle = actor.facing * (visualWeapon === "bomb" || visualWeapon === "bell" ? this.lerp(-0.56, 0.77, swing) : 0.24 - pulse * 0.42);
+      const aim = actor.setup.id === this.match.localPlayerId ? this.getAimDirection(actor) : null;
+      xOffset = aim ? aim.x * (25 - pulse * 10) : actor.facing * (25 - pulse * 10);
+      yOffset = aim ? -7 + aim.y * 15 - pulse * 5 : -5 - pulse * 5;
+      if (aim) {
+        angle = Math.atan2(aim.y, aim.x) - pulse * 0.25;
+        weaponScaleX = aim.x >= 0 ? 1 : -1;
+        if (aim.x < 0) {
+          angle += Math.PI;
+        }
+      } else {
+        angle = actor.facing * (visualWeapon === "bomb" || visualWeapon === "bell" ? this.lerp(-0.56, 0.77, swing) : 0.24 - pulse * 0.42);
+        weaponScaleX = actor.facing;
+      }
       scale += pulse * 0.1;
     }
 
@@ -1269,7 +1295,7 @@ export class PixiArena {
     actor.weaponView.x = xOffset;
     actor.weaponView.y = yOffset;
     actor.weaponView.rotation = angle;
-    actor.weaponView.scale.set(scale * actor.facing, scale);
+    actor.weaponView.scale.set(scale * weaponScaleX, scale);
     actor.nameTag.x = 0;
     actor.nameTag.y = -52;
 

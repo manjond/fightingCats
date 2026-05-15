@@ -3,10 +3,10 @@ import type { CatConfig, MapConfig, PlatformConfig, WeaponConfig, WeaponId } fro
 export const WORLD = {
   width: 1280,
   height: 720,
-  gravity: 1650,
-  playerSpeed: 330,
-  jumpVelocity: -660,
-  airJumpVelocity: -590,
+  gravity: 1780,
+  playerSpeed: 390,
+  jumpVelocity: -710,
+  airJumpVelocity: -650,
   maxHealth: 100,
   maxPlayers: 8,
 };
