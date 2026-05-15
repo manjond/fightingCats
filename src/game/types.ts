@@ -80,6 +80,7 @@ export interface RoomSettings {
   visibility: "public" | "private";
   mode: "standard" | "custom";
   maxPlayers: number;
+  botCount: number;
   mapIds: string[];
   rounds: number;
   startingWeapon: WeaponId;

@@ -30,7 +30,7 @@ const GROUND_ACCELERATION = 5600;
 const AIR_ACCELERATION = 3900;
 const GROUND_DECELERATION = 5200;
 const AIR_DECELERATION = 2800;
-const INPUT_IDLE: RealtimeInput = { left: false, right: false, jump: false, attack: false, throwWeapon: false, seq: 0 };
+const INPUT_IDLE: RealtimeInput = { left: false, right: false, jump: false, attack: false, throwWeapon: false, aimX: 0, aimY: 0, seq: 0 };
 
 export default class ArenaServer implements Party.Server {
   private roomSnapshot: RoomSnapshot | null = null;
@@ -212,7 +212,8 @@ export default class ArenaServer implements Party.Server {
     actor.jumpHeld = input.jump;
 
     if (input.attack || (input.throwWeapon && actor.weapon !== "scratch")) {
-      this.tryAttack(actor, now);
+      actor.facing = input.aimX >= actor.x ? 1 : -1;
+      this.tryAttack(actor, now, input);
     }
   }
 
@@ -229,32 +230,61 @@ export default class ArenaServer implements Party.Server {
     this.resolveVertical(actor, previousY);
   }
 
-  private tryAttack(actor: ServerActor, now: number): void {
+  private tryAttack(actor: ServerActor, now: number, input: RealtimeInput): void {
     const weapon = WEAPONS[actor.weapon];
     if (now - actor.lastAttackAt < weapon.cooldownMs) {
       return;
     }
     actor.lastAttackAt = now;
 
-    const targets = [...this.actors.values()].filter((candidate) => candidate.alive && candidate.id !== actor.id);
-    const target = targets
-      .filter((candidate) => Math.sign(candidate.x - actor.x || actor.facing) === actor.facing)
-      .sort((a, b) => Math.abs(a.x - actor.x) - Math.abs(b.x - actor.x))[0];
+    const direction = this.getAimDirection(actor, input);
+    actor.facing = direction.x >= 0 ? 1 : -1;
+    const target = this.findTargetAlongAim(actor, direction, weapon.range, weapon.kind === "melee" ? 34 : 46);
     if (!target) {
       this.consumeWeaponUse(actor);
       return;
     }
 
-    const distance = Math.hypot(target.x - actor.x, target.y - actor.y);
-    const verticalAllowance = weapon.kind === "melee" ? 58 : 120;
-    if (distance <= weapon.range && Math.abs(target.y - actor.y) <= verticalAllowance) {
-      if (weapon.kind === "explosive") {
-        this.explode(target.x, target.y, actor.id, actor.weapon);
-      } else {
-        this.damageActor(target, weapon.damage, actor.facing * weapon.knockback, -220);
-      }
+    if (weapon.kind === "explosive") {
+      this.explode(target.x, target.y, actor.id, actor.weapon);
+    } else {
+      this.damageActor(target, weapon.damage, direction.x * weapon.knockback, weapon.kind === "melee" ? -150 : direction.y * weapon.knockback * 0.45 - 110);
     }
     this.consumeWeaponUse(actor);
+  }
+
+  private getAimDirection(actor: ServerActor, input: RealtimeInput): { x: number; y: number } {
+    const fallbackX = actor.x + actor.facing * 120;
+    const fallbackY = actor.y - 8;
+    const dx = (input.aimX || fallbackX) - actor.x;
+    const dy = (input.aimY || fallbackY) - (actor.y - 8);
+    const length = Math.hypot(dx, dy) || 1;
+    return {
+      x: dx / length,
+      y: dy / length,
+    };
+  }
+
+  private findTargetAlongAim(actor: ServerActor, direction: { x: number; y: number }, range: number, radius: number): ServerActor | null {
+    let best: { actor: ServerActor; distance: number } | null = null;
+    for (const target of this.actors.values()) {
+      if (!target.alive || target.id === actor.id) {
+        continue;
+      }
+      const dx = target.x - actor.x;
+      const dy = target.y - (actor.y - 8);
+      const projected = dx * direction.x + dy * direction.y;
+      if (projected < 0 || projected > range) {
+        continue;
+      }
+      const closestX = actor.x + direction.x * projected;
+      const closestY = actor.y - 8 + direction.y * projected;
+      const missDistance = Math.hypot(target.x - closestX, target.y - closestY);
+      if (missDistance <= radius && (!best || projected < best.distance)) {
+        best = { actor: target, distance: projected };
+      }
+    }
+    return best?.actor ?? null;
   }
 
   private explode(x: number, y: number, ownerId: string, weaponId: WeaponId): void {
@@ -341,6 +371,8 @@ export default class ArenaServer implements Party.Server {
       jump: actor.blockedDown && (Math.abs(dx) > 180 || target.y + 30 < actor.y),
       attack: Math.hypot(actor.x - target.x, actor.y - target.y) < 92,
       throwWeapon: Math.abs(dx) < WEAPONS[actor.weapon].range,
+      aimX: target.x,
+      aimY: target.y,
       seq: 0,
     };
   }

@@ -722,6 +722,22 @@ kbd {
   line-height: 1.6;
 }
 
+.host-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(255, 209, 102, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 209, 102, 0.08);
+}
+
+.muted-panel {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #b8c4d8;
+  line-height: 1.45;
+}
+
 .game-shell {
   position: relative;
   display: grid;

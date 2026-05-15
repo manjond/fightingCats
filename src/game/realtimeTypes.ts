@@ -6,6 +6,8 @@ export interface RealtimeInput {
   jump: boolean;
   attack: boolean;
   throwWeapon: boolean;
+  aimX: number;
+  aimY: number;
   seq: number;
 }
 

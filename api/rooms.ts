@@ -19,6 +19,7 @@ interface RoomSettings {
   visibility: "public" | "private";
   mode: "standard" | "custom";
   maxPlayers: number;
+  botCount: number;
   mapIds: string[];
   rounds: number;
   startingWeapon: WeaponId;
@@ -41,6 +42,7 @@ const defaultSettings: RoomSettings = {
   visibility: "public",
   mode: "standard",
   maxPlayers: 4,
+  botCount: 0,
   mapIds: STANDARD_MAP_IDS,
   rounds: 5,
   startingWeapon: "scratch",
@@ -99,9 +101,15 @@ export default async function handler(req: any, res: any): Promise<void> {
       return;
     }
 
+    if (action === "update-bots") {
+      const room = await updateBots(String(body.code ?? ""), body.player, Number(body.botCount ?? 0));
+      res.status(room ? 200 : 403).json(room ?? { error: "Only host can update bots" });
+      return;
+    }
+
     if (action === "start") {
       const room = await startMatch(String(body.code ?? ""), body.player);
-      res.status(room ? 200 : 404).json(room ?? { error: "Room not found" });
+      res.status(room ? 200 : 403).json(room ?? { error: "Only host can start" });
       return;
     }
 
@@ -183,12 +191,27 @@ async function updatePlayer(code: string, player: PlayerSetup): Promise<RoomSnap
   return updated;
 }
 
-async function startMatch(code: string, player: PlayerSetup): Promise<RoomSnapshot | null> {
-  const room = await updatePlayer(code, player);
-  if (!room) {
+async function updateBots(code: string, player: PlayerSetup, botCount: number): Promise<RoomSnapshot | null> {
+  const room = await getRoom(code);
+  if (!room || room.hostId !== player.id || room.match?.status === "playing") {
     return null;
   }
 
+  const updated = {
+    ...room,
+    settings: normalizeSettings({ ...room.settings, botCount }),
+  };
+  await saveRoom(updated);
+  return updated;
+}
+
+async function startMatch(code: string, player: PlayerSetup): Promise<RoomSnapshot | null> {
+  const currentRoom = await getRoom(code);
+  if (!currentRoom || currentRoom.hostId !== player.id || currentRoom.match?.status === "playing") {
+    return null;
+  }
+
+  const room = (await updatePlayer(code, player)) ?? currentRoom;
   const updated = {
     ...room,
     match: {
@@ -263,16 +286,17 @@ function withAvailableCat(player: PlayerSetup, existingPlayers: PlayerSetup[]): 
 }
 
 function fillWithBots(room: RoomSnapshot): PlayerSetup[] {
-  const targetPlayers = Math.min(room.settings.maxPlayers, MAX_PLAYERS);
   const usedCats = new Set(room.players.map((player) => player.cat));
   const players = [...room.players];
+  const maxBots = Math.max(0, Math.min(room.settings.botCount ?? 0, room.settings.maxPlayers - players.length));
 
-  for (let index = players.length; index < targetPlayers; index += 1) {
+  for (let index = 0; index < maxBots; index += 1) {
+    const playerIndex = players.length;
     const cat = CAT_IDS.find((candidate) => !usedCats.has(candidate)) ?? CAT_IDS[index % CAT_IDS.length];
     usedCats.add(cat);
     players.push({
-      id: `bot-${index}-${room.code}`,
-      name: BOT_NAMES[(index - 1) % BOT_NAMES.length],
+      id: `bot-${playerIndex}-${room.code}`,
+      name: BOT_NAMES[index % BOT_NAMES.length],
       cat,
       bot: true,
     });
@@ -289,6 +313,7 @@ function normalizeSettings(settings: RoomSettings): RoomSettings {
     visibility: settings.visibility,
     mode: settings.mode,
     maxPlayers: clamp(settings.maxPlayers, 2, MAX_PLAYERS),
+    botCount: clamp(settings.botCount ?? 0, 0, MAX_PLAYERS),
     mapIds: mapIds.length > 0 ? mapIds : STANDARD_MAP_IDS,
     rounds,
     startingWeapon: settings.startingWeapon as WeaponId,

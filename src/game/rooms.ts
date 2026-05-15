@@ -20,6 +20,7 @@ export const defaultSettings: RoomSettings = {
   visibility: "public",
   mode: "standard",
   maxPlayers: 4,
+  botCount: 0,
   mapIds: STANDARD_MAP_IDS,
   rounds: 5,
   startingWeapon: "scratch",
@@ -120,16 +121,16 @@ export function fillWithBots(room: RoomSnapshot): RoomSnapshot {
     };
   }
 
-  const targetPlayers = Math.min(room.settings.maxPlayers, WORLD.maxPlayers);
   const usedCats = new Set(room.players.map((player) => player.cat));
   const bots: PlayerSetup[] = [];
+  const botCount = Math.max(0, Math.min(room.settings.botCount ?? 0, room.settings.maxPlayers - room.players.length));
 
-  for (let index = room.players.length; index < targetPlayers; index += 1) {
-    const cat = CATS.find((candidate) => !usedCats.has(candidate.id)) ?? CATS[index % CATS.length];
+  for (let index = 0; index < botCount; index += 1) {
+    const cat = CATS.find((candidate) => !usedCats.has(candidate.id)) ?? CATS[(room.players.length + index) % CATS.length];
     usedCats.add(cat.id);
     bots.push({
-      id: `bot-${index}-${room.code}`,
-      name: BOT_NAMES[(index - 1) % BOT_NAMES.length],
+      id: `bot-${room.players.length + index}-${room.code}`,
+      name: BOT_NAMES[index % BOT_NAMES.length],
       cat: cat.id,
       bot: true,
     });
@@ -139,6 +140,23 @@ export function fillWithBots(room: RoomSnapshot): RoomSnapshot {
     ...room,
     players: [...room.players, ...bots],
   };
+}
+
+export async function updateRoomBots(room: RoomSnapshot, player: PlayerSetup, botCount: number): Promise<RoomSnapshot> {
+  const remoteRoom = await callRoomsApi<RoomSnapshot>("update-bots", { code: room.code, player, botCount });
+  if (remoteRoom) {
+    saveRoom(remoteRoom);
+    return remoteRoom;
+  }
+
+  assertLocalRoomsAllowed();
+
+  const updated = {
+    ...room,
+    settings: normalizeSettings({ ...room.settings, botCount }),
+  };
+  saveRoom(updated);
+  return updated;
 }
 
 export async function startRoomMatch(room: RoomSnapshot, player: PlayerSetup): Promise<RoomSnapshot> {
@@ -203,6 +221,7 @@ export function normalizeSettings(settings: RoomSettings): RoomSettings {
     visibility: settings.visibility,
     mode: settings.mode,
     maxPlayers: clamp(settings.maxPlayers, 2, WORLD.maxPlayers),
+    botCount: clamp(settings.botCount ?? 0, 0, WORLD.maxPlayers),
     mapIds: mapIds.length > 0 ? mapIds : STANDARD_MAP_IDS,
     rounds,
     startingWeapon: settings.startingWeapon as WeaponId,

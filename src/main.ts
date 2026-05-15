@@ -11,6 +11,7 @@ import {
   normalizeSettings,
   quickPlay,
   startRoomMatch,
+  updateRoomBots,
   roomWithUpdatedHost,
 } from "./game/rooms";
 import type { CatId, MapConfig, MatchResult, PlatformConfig, RoomSettings, RoomSnapshot, RuntimeControls, WeaponId } from "./game/types";
@@ -205,6 +206,7 @@ function renderCreateRoom(): void {
       visibility: readSelect("visibility") as RoomSettings["visibility"],
       mode: readSelect("mode") as RoomSettings["mode"],
       maxPlayers: Number(readInput("max-players")),
+      botCount: 0,
       rounds: Number(readInput("rounds")),
       mapIds: selectedMaps,
       startingWeapon: readSelect("starting-weapon") as WeaponId,
@@ -224,6 +226,7 @@ function renderRoom(room: RoomSnapshot): void {
   clearRoomPolling();
   syncLocalPlayerFromRoom(room);
   const occupiedCats = new Map(room.players.filter((player) => player.id !== localPlayer.id).map((player) => [player.cat, player.name]));
+  const isHost = room.hostId === localPlayer.id;
 
   appRoot.innerHTML = `
     <main class="shell">
@@ -234,7 +237,11 @@ function renderRoom(room: RoomSnapshot): void {
             <p class="eyebrow">${room.settings.visibility === "public" ? t("publicRoom") : t("privateRoom")}</p>
             <h1>${room.code}</h1>
           </div>
-          <button class="primary" id="start-match">${t("play")}</button>
+          ${
+            isHost
+              ? `<button class="primary" id="start-match">${t("play")}</button>`
+              : `<button class="primary" disabled>${t("waitingForLeader")}</button>`
+          }
           ${renderLanguageSwitch()}
         </div>
 
@@ -270,9 +277,12 @@ function renderRoom(room: RoomSnapshot): void {
             <div class="room-summary">
               <p><strong>${t("mode")}</strong> ${room.settings.mode === "standard" ? t("standardMode") : t("customMode")}</p>
               <p><strong>${t("rounds")}</strong> ${room.settings.rounds}</p>
+              <p><strong>${t("bots")}</strong> ${room.settings.botCount}</p>
               <p><strong>${t("startingWeapon")}</strong> ${weaponName(room.settings.startingWeapon)}</p>
               <p><strong>${t("maps")}</strong> ${room.settings.mapIds.map((id) => mapName(id)).join(", ")}</p>
             </div>
+
+            ${renderBotControls(room, isHost)}
           </div>
         </div>
       </section>
@@ -281,6 +291,15 @@ function renderRoom(room: RoomSnapshot): void {
 
   document.querySelector("#back-home")?.addEventListener("click", renderHome);
   bindLanguageSwitch(() => renderRoom(room));
+  document.querySelector<HTMLSelectElement>("#bot-count")?.addEventListener("change", async (event) => {
+    try {
+      const botCount = Number((event.currentTarget as HTMLSelectElement).value);
+      activeRoom = await updateRoomBots(room, localPlayer, botCount);
+      renderRoom(activeRoom);
+    } catch (error) {
+      reportRoomError(error);
+    }
+  });
   document.querySelectorAll<HTMLButtonElement>("[data-cat-step]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
@@ -432,7 +451,7 @@ function startRoomPolling(code: string): void {
         return;
       }
 
-      if (JSON.stringify(latestRoom.players) !== JSON.stringify(activeRoom.players)) {
+      if (JSON.stringify(latestRoom.players) !== JSON.stringify(activeRoom.players) || JSON.stringify(latestRoom.settings) !== JSON.stringify(activeRoom.settings)) {
         activeRoom = latestRoom;
         renderRoom(latestRoom);
       }
@@ -488,7 +507,7 @@ function renderControlsSummary(): string {
   const controls = [
     { keys: ["A", "D", "<", ">"], action: t("controlsMove") },
     { keys: ["W", "Space", "^"], action: t("controlsJump") },
-    { keys: ["J", "A"], action: t("controlsAttack") },
+    { keys: ["Mouse", "A"], action: t("controlsAttack") },
     { keys: ["K", "Shift", "B"], action: t("controlsThrow") },
   ];
 
@@ -511,6 +530,30 @@ function renderControlsSummary(): string {
           .join("")}
       </div>
     </section>
+  `;
+}
+
+function renderBotControls(room: RoomSnapshot, isHost: boolean): string {
+  const maxBots = Math.max(0, room.settings.maxPlayers - room.players.length);
+  const selected = Math.min(room.settings.botCount, maxBots);
+
+  if (!isHost) {
+    return `<div class="host-panel muted-panel">${t("hostOnlyStart")}<br />${t("waitingForLeader")}</div>`;
+  }
+
+  return `
+    <div class="host-panel">
+      <label>
+        ${t("botsInMatch")}
+        <select id="bot-count">
+          ${Array.from({ length: maxBots + 1 }, (_, count) => {
+            const label = count === 0 ? t("noBots") : `${count} ${t("bots")}`;
+            return `<option value="${count}" ${count === selected ? "selected" : ""}>${label}</option>`;
+          }).join("")}
+        </select>
+      </label>
+      <p class="note">${t("hostOnlyStart")}</p>
+    </div>
   `;
 }
 

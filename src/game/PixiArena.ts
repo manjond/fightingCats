@@ -54,6 +54,7 @@ type Projectile = {
   ownerId: string;
   bornAt: number;
   view: Container;
+  cosmetic?: boolean;
 };
 
 const OUTLINE = 0x0b1020;
@@ -106,6 +107,10 @@ export class PixiArena {
   private inputSeq = 0;
   private realtimeRoundEventKey = "";
   private realtimeMatchEnded = false;
+  private aimX = WORLD.width / 2;
+  private aimY = WORLD.height / 2;
+  private pointerAttackQueued = false;
+  private lastRealtimeCosmeticAt = 0;
 
   constructor(
     private parent: HTMLElement,
@@ -140,6 +145,7 @@ export class PixiArena {
     window.addEventListener("resize", this.resize);
     this.resize();
     this.bindKeyboard();
+    this.bindPointer();
     this.startRound();
     this.connectRealtime();
     this.app.ticker.add(this.tick);
@@ -153,6 +159,9 @@ export class PixiArena {
     this.timers = [];
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("pointermove", this.onPointerMove);
+    this.app.canvas.removeEventListener("pointerdown", this.onPointerDown);
+    this.app.canvas.removeEventListener("contextmenu", this.onContextMenu);
     window.removeEventListener("resize", this.resize);
     this.app.ticker.remove(this.tick);
     if (this.initialized) {
@@ -182,6 +191,39 @@ export class PixiArena {
     this.keys.delete(event.code);
   };
 
+  private bindPointer(): void {
+    this.app.canvas.addEventListener("pointerdown", this.onPointerDown);
+    this.app.canvas.addEventListener("contextmenu", this.onContextMenu);
+    window.addEventListener("pointermove", this.onPointerMove);
+  }
+
+  private onPointerMove = (event: PointerEvent): void => {
+    this.updateAimFromPointer(event.clientX, event.clientY);
+  };
+
+  private onPointerDown = (event: PointerEvent): void => {
+    this.updateAimFromPointer(event.clientX, event.clientY);
+    if (event.button === 0) {
+      this.pointerAttackQueued = true;
+    } else if (event.button === 2) {
+      this.controls.throwWeapon = true;
+      window.setTimeout(() => {
+        this.controls.throwWeapon = false;
+      }, 80);
+    }
+  };
+
+  private onContextMenu = (event: MouseEvent): void => {
+    event.preventDefault();
+  };
+
+  private updateAimFromPointer(clientX: number, clientY: number): void {
+    const rect = this.app.canvas.getBoundingClientRect();
+    const scale = this.world.scale.x || 1;
+    this.aimX = this.clamp((clientX - rect.left - this.world.position.x) / scale, 0, WORLD.width);
+    this.aimY = this.clamp((clientY - rect.top - this.world.position.y) / scale, 0, WORLD.height);
+  }
+
   private tick = (_ticker: Ticker): void => {
     const now = performance.now();
     if (now < this.hitStopUntil) {
@@ -192,8 +234,11 @@ export class PixiArena {
     const delta = Math.min(0.033, (now - this.lastTime) / 1000);
     this.lastTime = now;
     if (this.realtime) {
-      this.realtime.sendInput(this.readLocalInput());
+      const input = this.readLocalInput();
+      this.playRealtimeLocalAttack(input, now);
+      this.realtime.sendInput(input);
       this.applyRealtimeSnapshot();
+      this.updateProjectiles(now, delta);
       return;
     }
     this.update(now, delta);
@@ -612,13 +657,17 @@ export class PixiArena {
   }
 
   private readLocalInput(): RealtimeInput {
+    const attack = this.controls.attack || this.keys.has("KeyJ") || this.pointerAttackQueued;
+    this.pointerAttackQueued = false;
     this.inputSeq += 1;
     return {
       left: this.controls.left || this.keys.has("ArrowLeft") || this.keys.has("KeyA"),
       right: this.controls.right || this.keys.has("ArrowRight") || this.keys.has("KeyD"),
       jump: this.controls.jump || this.keys.has("ArrowUp") || this.keys.has("KeyW") || this.keys.has("Space"),
-      attack: this.controls.attack || this.keys.has("KeyJ"),
+      attack,
       throwWeapon: this.controls.throwWeapon || this.keys.has("KeyK") || this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"),
+      aimX: this.aimX,
+      aimY: this.aimY,
       seq: this.inputSeq,
     };
   }
@@ -779,6 +828,7 @@ export class PixiArena {
     }
 
     actor.lastAttackAt = now;
+    actor.facing = this.aimX >= actor.x ? 1 : -1;
     this.playWeaponAnimation(actor, weaponId, now);
     if (weapon.kind === "melee") {
       this.performMelee(actor, weaponId);
@@ -823,18 +873,19 @@ export class PixiArena {
 
   private fireProjectile(actor: Actor, weaponId: WeaponId, now: number): void {
     const weapon = WEAPONS[weaponId];
+    const direction = this.getAimDirection(actor);
     const projectileView = this.drawWeapon(actor.setup.cat, weaponId);
-    projectileView.x = actor.x + actor.facing * 34;
-    projectileView.y = actor.y - 4;
+    projectileView.x = actor.x + direction.x * 34;
+    projectileView.y = actor.y - 8 + direction.y * 12;
     projectileView.scale.set(weapon.kind === "explosive" ? 0.78 : weaponId === "spray" ? 0.48 : 0.62);
     this.world.addChild(projectileView);
-    actor.vx -= actor.facing * (weapon.kind === "explosive" ? 115 : weaponId === "pistol" ? 72 : 44);
+    actor.vx -= direction.x * (weapon.kind === "explosive" ? 115 : weaponId === "pistol" ? 72 : 44);
 
     this.projectiles.push({
       x: projectileView.x,
       y: projectileView.y,
-      vx: (weapon.projectileSpeed ?? 500) * actor.facing,
-      vy: weapon.kind === "explosive" ? -120 : 0,
+      vx: (weapon.projectileSpeed ?? 500) * direction.x,
+      vy: (weapon.projectileSpeed ?? 500) * direction.y + (weapon.kind === "explosive" ? -80 : 0),
       weapon: weaponId,
       ownerId: actor.setup.id,
       bornAt: now,
@@ -844,6 +895,59 @@ export class PixiArena {
     if (weapon.kind === "explosive") {
       actor.weaponUses = 0;
     }
+  }
+
+  private playRealtimeLocalAttack(input: RealtimeInput, now: number): void {
+    if (!input.attack || !this.localActor?.alive) {
+      return;
+    }
+
+    const weaponId = this.localActor.weapon;
+    const weapon = WEAPONS[weaponId];
+    if (now - this.lastRealtimeCosmeticAt < weapon.cooldownMs) {
+      return;
+    }
+
+    this.lastRealtimeCosmeticAt = now;
+    this.localActor.facing = this.aimX >= this.localActor.x ? 1 : -1;
+    this.playWeaponAnimation(this.localActor, weaponId, now);
+    if (weapon.kind === "melee") {
+      this.addMeleeHitSpark(this.localActor, weaponId);
+      return;
+    }
+
+    this.createCosmeticProjectile(this.localActor, weaponId, now);
+  }
+
+  private createCosmeticProjectile(actor: Actor, weaponId: WeaponId, now: number): void {
+    const weapon = WEAPONS[weaponId];
+    const direction = this.getAimDirection(actor);
+    const projectileView = this.drawWeapon(actor.setup.cat, weaponId);
+    projectileView.x = actor.x + direction.x * 34;
+    projectileView.y = actor.y - 8 + direction.y * 12;
+    projectileView.scale.set(weapon.kind === "explosive" ? 0.78 : weaponId === "spray" ? 0.48 : 0.62);
+    this.world.addChild(projectileView);
+    this.projectiles.push({
+      x: projectileView.x,
+      y: projectileView.y,
+      vx: (weapon.projectileSpeed ?? 500) * direction.x,
+      vy: (weapon.projectileSpeed ?? 500) * direction.y + (weapon.kind === "explosive" ? -80 : 0),
+      weapon: weaponId,
+      ownerId: actor.setup.id,
+      bornAt: now,
+      view: projectileView,
+      cosmetic: true,
+    });
+  }
+
+  private getAimDirection(actor: Actor): { x: number; y: number } {
+    const dx = this.aimX - actor.x;
+    const dy = this.aimY - (actor.y - 8);
+    const length = Math.hypot(dx, dy) || 1;
+    return {
+      x: dx / length,
+      y: dy / length,
+    };
   }
 
   private updateProjectiles(now: number, delta: number): void {
@@ -858,7 +962,7 @@ export class PixiArena {
 
       const projectileRect = { x: projectile.x, y: projectile.y, width: 22, height: 22 };
       if (this.platforms.some((platform) => this.overlap(projectileRect, platform))) {
-        if (weapon.kind === "explosive") {
+        if (!projectile.cosmetic && weapon.kind === "explosive") {
           this.explode(projectile.x, projectile.y, projectile.ownerId, projectile.weapon);
         }
         this.removeProjectile(projectile);
@@ -867,6 +971,11 @@ export class PixiArena {
 
       const target = this.actors.find((actor) => actor.alive && actor.setup.id !== projectile.ownerId && this.overlap(projectileRect, this.actorRect(actor)));
       if (target) {
+        if (projectile.cosmetic) {
+          this.removeProjectile(projectile);
+          continue;
+        }
+
         if (weapon.kind === "explosive") {
           this.explode(projectile.x, projectile.y, projectile.ownerId, projectile.weapon);
         } else {
@@ -879,7 +988,7 @@ export class PixiArena {
 
       const maxAge = weapon.kind === "explosive" ? 1550 : (weapon.range / (weapon.projectileSpeed ?? 500)) * 1000;
       if (now - projectile.bornAt > maxAge) {
-        if (weapon.kind === "explosive") {
+        if (!projectile.cosmetic && weapon.kind === "explosive") {
           this.explode(projectile.x, projectile.y, projectile.ownerId, projectile.weapon);
         }
         this.removeProjectile(projectile);
