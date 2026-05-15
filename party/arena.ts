@@ -50,6 +50,10 @@ export default class ArenaServer implements Party.Server {
 
   constructor(readonly room: Party.Room) {}
 
+  onRequest(): Response {
+    return Response.json({ ok: true, room: this.room.id });
+  }
+
   onMessage(rawMessage: string, sender: Party.Connection): void {
     const message = this.parseMessage(rawMessage);
     if (!message) {
