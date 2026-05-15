@@ -1,0 +1,42 @@
+name: Deploy realtime arena
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "party/**"
+      - "partykit.json"
+      - "src/game/config.ts"
+      - "src/game/realtimeTypes.ts"
+      - "src/game/types.ts"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PARTYKIT_LOGIN: ${{ secrets.PARTYKIT_LOGIN }}
+      PARTYKIT_TOKEN: ${{ secrets.PARTYKIT_TOKEN }}
+    steps:
+      - name: Check secrets
+        run: |
+          test -n "$PARTYKIT_LOGIN"
+          test -n "$PARTYKIT_TOKEN"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Deploy PartyKit
+        run: npm run deploy:realtime

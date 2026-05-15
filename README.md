@@ -60,11 +60,13 @@ Why PartyKit:
 
 Realtime setup:
 
-1. Log in to PartyKit locally: `npx partykit login`.
-2. Deploy the realtime server: `npm run deploy:realtime`.
-3. Copy the deployed host, usually like `fighting-cats-realtime.<your-user>.partykit.dev`.
-4. In Vercel, add env var `VITE_PARTYKIT_HOST` with that host, without `https://` or `wss://`.
-5. Redeploy the Vercel app.
+1. Log in to PartyKit once: `npx partykit login`.
+2. Generate CI credentials: `npx partykit token generate`.
+3. In GitHub, add repository secrets `PARTYKIT_LOGIN` and `PARTYKIT_TOKEN` with the values printed by the token command.
+4. In GitHub Actions, run `Deploy realtime arena` manually once. Later, changes to `party/**` deploy automatically from `main`.
+5. The deployed host will usually be `fighting-cats-realtime.<PARTYKIT_LOGIN>.partykit.dev`.
+6. In Vercel, add env var `VITE_PARTYKIT_HOST` with that host, without `https://` or `wss://`.
+7. Redeploy the Vercel app.
 
 Local realtime testing:
 
